@@ -1,0 +1,21 @@
+# AWS SAM Configuration File
+# Copy this file to samconfig.toml and customize for your environment
+#
+# To use: cp samconfig.toml.example samconfig.toml
+#
+# Note: samconfig.toml is gitignored to avoid committing AWS account-specific settings
+
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "techmoda-capstone"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = []
+image_repositories = []
+confirm_changeset = true
+resolve_s3 = true
+
+[default.build.parameters]
+cached = true
+parallel = true

@@ -1,0 +1,10 @@
+{
+  "name": "list-items",
+  "version": "1.0.0",
+  "description": "List all products in the TechModa catalog",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0"
+  }
+}

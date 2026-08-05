@@ -1,0 +1,41 @@
+{
+  "name": "TechModa Serverless Capstone",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:18-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "amazonwebservices.aws-toolkit-vscode",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2,
+        "files.exclude": {
+          "**/.aws-sam": true,
+          "**/node_modules": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [],
+
+  "remoteUser": "node"
+}

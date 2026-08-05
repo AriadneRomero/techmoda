@@ -1,0 +1,273 @@
+Transform: AWS::Serverless-2016-10-31
+Description: TechModa Serverless Capstone - Fashion E-commerce Product Catalog API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Runtime: nodejs18.x
+    Tracing: Active
+    Environment:
+      Variables:
+        PRODUCTS_TABLE: !Ref ProductsTable
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+
+Resources:
+  # API Gateway REST API
+  ProductsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub
+        - ${ResourceName} From Stack ${AWS::StackName}
+        - ResourceName: ProductsApi
+      StageName: Prod
+      DefinitionBody:
+        openapi: '3.0'
+        info:
+          title: TechModa Products API
+          version: '1.0'
+        paths:
+          /products:
+            get:
+              summary: List all products
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListItemsFunction.Arn}/invocations
+              responses: {}
+            post:
+              summary: Create a new product
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateItemFunction.Arn}/invocations
+              responses: {}
+          /products/{id}:
+            get:
+              summary: Get a product by ID
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetItemFunction.Arn}/invocations
+              responses: {}
+            put:
+              summary: Update a product
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateItemFunction.Arn}/invocations
+              responses: {}
+            delete:
+              summary: Delete a product
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteItemFunction.Arn}/invocations
+              responses: {}
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
+
+  # DynamoDB Table
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-Products
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+
+  # Lambda Functions
+  ListItemsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ListItems
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: ListItems
+      CodeUri: functions/list-items
+      Handler: index.handler
+      Events:
+        ApiGETProducts:
+          Type: Api
+          Properties:
+            Path: /products
+            Method: GET
+            RestApiId: !Ref ProductsApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+
+  CreateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-CreateItem
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: CreateItem
+      CodeUri: functions/create-item
+      Handler: index.handler
+      Events:
+        ApiPOSTProducts:
+          Type: Api
+          Properties:
+            Path: /products
+            Method: POST
+            RestApiId: !Ref ProductsApi
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref ProductsTable
+
+  GetItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-GetItem
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: GetItem
+      CodeUri: functions/get-item
+      Handler: index.handler
+      Events:
+        ApiGETProductsId:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: GET
+            RestApiId: !Ref ProductsApi
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+
+  UpdateItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-UpdateItem
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: UpdateItem
+      CodeUri: functions/update-item
+      Handler: index.handler
+      Events:
+        ApiPUTProductsId:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: PUT
+            RestApiId: !Ref ProductsApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+
+  DeleteItemFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-DeleteItem
+      Description: !Sub
+        - Stack ${AWS::StackName} Function ${ResourceName}
+        - ResourceName: DeleteItem
+      CodeUri: functions/delete-item
+      Handler: index.handler
+      Events:
+        ApiDELETEProductsId:
+          Type: Api
+          Properties:
+            Path: /products/{id}
+            Method: DELETE
+            RestApiId: !Ref ProductsApi
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+
+  # S3 Bucket for Static Website Hosting
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-frontend
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub ${FrontendBucket.Arn}/*
+            Principal: '*'
+
+  # CloudFront Distribution
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+Outputs:
+  ApiUrl:
+    Description: URL of the Products API
+    Value: !Sub 'https://${ProductsApi}.execute-api.${AWS::Region}.amazonaws.com/Prod'
+  ProductsTableName:
+    Description: Name of the DynamoDB Products table
+    Value: !Ref ProductsTable
+  Region:
+    Description: AWS Region
+    Value: !Ref AWS::Region
+  FrontendUrl:
+    Description: CloudFront URL for the frontend
+    Value: !Sub 'https://${FrontendDistribution.DomainName}'
+  FrontendBucketName:
+    Description: S3 Bucket name for frontend
+    Value: !Ref FrontendBucket
+
+Metadata:
+  AWS::Composer::Groups:
+    Group:
+      Label: API Compute
+      Members:
+        - ListItemsFunction
+        - CreateItemFunction
+        - GetItemFunction
+        - UpdateItemFunction
+        - DeleteItemFunction
