@@ -4,6 +4,12 @@
 
 Esta guía ayuda a los instructores a facilitar la Sesión 10 (la sesión del capstone), apoyar a los estudiantes durante la implementación, evaluar las entregas y solucionar problemas comunes.
 
+> 🔌 **Lo que realmente se despliega:** el CRUD se expone con **una Lambda Function URL** + **router**
+> (no API Gateway), y cada función lleva sus `Policies:` para que **SAM le cree un rol de mínimo
+> privilegio**. Stack **`techmoda-ai`**, región **us-east-1**. Requiere una cuenta con `iam:CreateRole`.
+> Donde esta guía menciona API Gateway, es material didáctico del patrón clásico. Ver
+> [../docs/SANDBOX-COMPAT.md](../docs/SANDBOX-COMPAT.md) y [../docs/IAM.md](../docs/IAM.md).
+
 ## Cronograma de la Sesión 10 (120 minutos)
 
 ### 0-15 min: Introducción y Configuración
@@ -29,7 +35,7 @@ Esta guía ayuda a los instructores a facilitar la Sesión 10 (la sesión del ca
 
 **Actividades del Instructor**:
 - Recorrer [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
-- Explicar el flujo API Gateway → Lambda → DynamoDB
+- Explicar el flujo Function URL → router → Lambda → DynamoDB (en el sandbox; sin API Gateway)
 - Revisar la estructura del template SAM (template.yaml)
 - Discutir la responsabilidad de cada función Lambda
 - Mostrar el esquema de DynamoDB (productId, name, price, etc.)
@@ -78,13 +84,13 @@ Esta guía ayuda a los instructores a facilitar la Sesión 10 (la sesión del ca
 - Ayudar con la sintaxis de AWS SDK v3 si los estudiantes tienen dificultades
 - Verificar que se están usando las variables de entorno (PRODUCTS_TABLE)
 - Comprobar que se incluyen los headers CORS en las respuestas
-- Recordar sobre el formato apropiado de respuesta de API Gateway
+- Recordar sobre el formato apropiado de respuesta HTTP ({ statusCode, headers, body }) para la Function URL
 
 ### 90-110 min: Despliegue y Pruebas
 
 **Actividades del Instructor**:
-- Demostrar `sam build && sam deploy --guided`
-- Mostrar cómo recuperar la URL de API Gateway de los outputs
+- Demostrar `sam build && sam deploy` (con `--capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --resolve-s3`)
+- Mostrar cómo recuperar la **Function URL** (output `ApiUrl`) de los outputs
 - Recorrer las pruebas con curl ([docs/TESTING_GUIDE.md](../docs/TESTING_GUIDE.md))
 - Demostrar el acceso a CloudWatch Logs
 - Mostrar trazas de X-Ray (opcional, si el tiempo lo permite)
@@ -124,7 +130,7 @@ Esta guía ayuda a los instructores a facilitar la Sesión 10 (la sesión del ca
 
 **Checklist de Cierre**:
 - ✅ Las 5 operaciones CRUD funcionando
-- ✅ URL de API Gateway accesible
+- ✅ Lambda Function URL (output `ApiUrl`) accesible
 - ✅ CloudWatch Logs mostrando ejecuciones
 - ✅ Sin errores de permisos
 - ✅ Los estudiantes entienden cómo eliminar recursos
@@ -134,7 +140,7 @@ Esta guía ayuda a los instructores a facilitar la Sesión 10 (la sesión del ca
 Al final de la Sesión 10, los estudiantes deben demostrar:
 
 1. **Diseño de Arquitectura Serverless**
-   - Diseñar sistemas orientados a eventos con Lambda, API Gateway, DynamoDB
+   - Diseñar sistemas orientados a eventos con Lambda, Lambda Function URLs, DynamoDB
    - Comprender arquitecturas serverless vs. tradicionales
    - Aplicar principios de AWS Well-Architected
 
@@ -191,7 +197,7 @@ Al final de la Sesión 10, los estudiantes deben demostrar:
 - Dirigir a [docs/prompts/01_ENVIRONMENT_SETUP.md](../docs/prompts/01_ENVIRONMENT_SETUP.md)
 - Verificar que PATH incluye los binarios de AWS CLI/SAM CLI
 - Probar credenciales: `aws sts get-caller-identity`
-- Confirmar que el usuario IAM tiene los permisos necesarios (CloudFormation, Lambda, DynamoDB, API Gateway, IAM)
+- Confirmar que la identidad del deploy puede crear roles (`iam:CreateRole`), además de CloudFormation, Lambda (incl. Function URLs) y DynamoDB
 
 ### Desafío 2: Errores en Funciones Lambda
 
@@ -204,8 +210,8 @@ Al final de la Sesión 10, los estudiantes deben demostrar:
 - Revisar CloudWatch Logs para el error específico
 - Verificar que los imports de AWS SDK v3 son correctos
 - Confirmar que se está leyendo la variable de entorno PRODUCTS_TABLE
-- Revisar las políticas de DynamoDB en template.yaml (DynamoDBReadPolicy, DynamoDBCrudPolicy)
-- Verificar el formato de respuesta de API Gateway (statusCode, headers, body)
+- Verificar que la función declare `Policies:` acotadas y **no** un `Role:` (excluyentes en SAM)
+- Verificar el formato de respuesta HTTP (statusCode, headers, body) — válido para la Function URL
 
 **Problemas Comunes en el Código**:
 ```javascript
@@ -229,7 +235,7 @@ return {
 - Las funciones fallan al extraer productId
 
 **Soluciones**:
-- Verificar que la ruta de API Gateway tiene el parámetro `{id}` en template.yaml
+- Verificar que el **router** (`functions/router/index.js`) parsea `{id}` desde `event.rawPath` y reconstruye `event.pathParameters.id`
 - Comprobar la extracción: `const productId = event.pathParameters.id`
 - Agregar verificación de seguridad:
   ```javascript
@@ -301,18 +307,19 @@ return {
 
 **Soluciones**:
 - Revisar la pestaña Events de la consola de CloudFormation para errores específicos
-- Causas comunes:
-  - Permisos IAM: El estudiante no permitió la creación de roles IAM
-  - Límites de recursos: Cuotas de servicio excedidas (poco probable)
+- Causas comunes (sandbox):
+  - Falta `CAPABILITY_AUTO_EXPAND` (obligatorio para el Transform SAM)
+  - Se dejó `Policies:` en una función junto con `Role:` (mutuamente excluyentes → falla)
+  - Quedó un `AWS::Serverless::Api` o `Events: Type: Api` (el capstone no usa API Gateway)
   - Template inválido: Errores de sintaxis YAML
 - Reintentar despliegue después de corregir el problema
-- Eliminar stack fallido: `aws cloudformation delete-stack --stack-name techmoda-capstone`
+- Eliminar stack fallido: `aws cloudformation delete-stack --stack-name techmoda-ai --region us-east-1`
 
 ### Desafío 8: Confusión con las Pruebas
 
 **Síntomas**:
 - Los estudiantes no saben cómo probar
-- No pueden encontrar la URL de API Gateway
+- No pueden encontrar la Function URL (output `ApiUrl`)
 - Los comandos curl no funcionan
 
 **Soluciones**:
@@ -403,14 +410,14 @@ Los estudiantes deben entregar:
 
 **Corrección del template SAM (5%)**:
 - ✅ Sintaxis YAML válida
-- ✅ Las 5 funciones Lambda definidas
-- ✅ API Gateway con rutas correctas
+- ✅ Las 5 funciones Lambda definidas + router
+- ✅ Function URL en el router (sin `AWS::Serverless::Api`, sin `Events: Type: Api`)
 - ✅ Tabla DynamoDB con esquema apropiado
-- ✅ Políticas IAM (permisos de DynamoDB)
+- ✅ Cada función con sus `Policies:` acotadas y sin `Role:`
 - ✅ Variables de entorno inyectadas
 
 **Mejores prácticas de AWS (5%)**:
-- ✅ Privilegios mínimos en IAM (políticas específicas por función)
+- ✅ Privilegio mínimo real: acotado por ARN donde el servicio lo admite, por acción donde no (ver `docs/IAM.md`)
 - ✅ Rastreo X-Ray habilitado
 - ✅ CloudWatch Logs configurados
 - ✅ Headers CORS en respuestas
@@ -427,7 +434,7 @@ Los estudiantes deben entregar:
 
 **Diagrama de arquitectura (5%)**:
 - ✅ Diagrama presente (basado en texto, diagrams.py, o draw.io)
-- ✅ Muestra todos los componentes (API Gateway, Lambda, DynamoDB)
+- ✅ Muestra todos los componentes (Lambda Function URL + router, Lambda, DynamoDB)
 - ✅ Flujo de solicitud indicado
 - ✅ Claro y comprensible
 
@@ -447,7 +454,7 @@ Los estudiantes deben entregar:
 **Elecciones tecnológicas apropiadas (5%)**:
 - ✅ Arquitectura serverless justificada para el caso de uso
 - ✅ DynamoDB adecuado para catálogo de productos
-- ✅ API Gateway apropiado para REST API
+- ✅ Lambda Function URL + router apropiado para exponer la API (compatible con el sandbox)
 - ✅ Decisiones de diseño rentables
 
 **Conciencia de costos (3%)**:
@@ -538,24 +545,24 @@ Ver [EVALUATION_RUBRIC.md](EVALUATION_RUBRIC.md) para criterios de puntuación d
 
 ### Correcciones Rápidas Comunes
 
-**URL de API faltante**:
+**Function URL faltante** (output `ApiUrl`):
 ```bash
-aws cloudformation describe-stacks --stack-name techmoda-capstone --query "Stacks[0].Outputs"
+aws cloudformation describe-stacks --stack-name techmoda-ai --region us-east-1 --query "Stacks[0].Outputs"
 ```
 
 **Revisar items de DynamoDB**:
 ```bash
-aws dynamodb scan --table-name techmoda-capstone-Products
+aws dynamodb scan --table-name techmoda-ai-Products
 ```
 
 **Ver logs recientes de Lambda**:
 ```bash
-aws logs tail /aws/lambda/techmoda-capstone-ListItems --since 5m
+aws logs tail /aws/lambda/techmoda-ai-ListItems --since 5m
 ```
 
 **Forzar eliminación de stack atascado**:
 ```bash
-aws cloudformation delete-stack --stack-name techmoda-capstone
+aws cloudformation delete-stack --stack-name techmoda-ai --region us-east-1
 ```
 
 ## Seguimiento Post-Sesión
@@ -601,9 +608,8 @@ Ver [SOLUTION_NOTES.md](SOLUTION_NOTES.md) para patrones de implementación (no 
 ### Enlaces de Consola AWS
 
 - CloudFormation: https://console.aws.amazon.com/cloudformation
-- Lambda: https://console.aws.amazon.com/lambda
+- Lambda (incl. Function URLs): https://console.aws.amazon.com/lambda
 - DynamoDB: https://console.aws.amazon.com/dynamodb
-- API Gateway: https://console.aws.amazon.com/apigateway
 - CloudWatch: https://console.aws.amazon.com/cloudwatch
 - X-Ray: https://console.aws.amazon.com/xray
 

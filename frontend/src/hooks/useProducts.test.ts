@@ -89,7 +89,9 @@ describe('useProducts Hook', () => {
       const response = await result.current.createProduct(mockProductInput);
 
       expect(response.success).toBe(true);
-      expect(result.current.products).toEqual([mockProduct]);
+      await waitFor(() => {
+        expect(result.current.products).toEqual([mockProduct]);
+      });
       expect(api.createProduct).toHaveBeenCalledWith(mockProductInput);
     });
 
@@ -113,7 +115,7 @@ describe('useProducts Hook', () => {
 
     it('should add new product to the beginning of the list', async () => {
       vi.mocked(api.listProducts).mockResolvedValueOnce(mockProducts);
-      const newProduct = { ...mockProduct, product_id: 'new-product' };
+      const newProduct = { ...mockProduct, productId: 'new-product' };
       vi.mocked(api.createProduct).mockResolvedValueOnce(newProduct);
 
       const { result } = renderHook(() => useProducts());
@@ -124,8 +126,10 @@ describe('useProducts Hook', () => {
 
       await result.current.createProduct(mockProductInput);
 
-      expect(result.current.products[0]).toEqual(newProduct);
-      expect(result.current.products.length).toBe(mockProducts.length + 1);
+      await waitFor(() => {
+        expect(result.current.products[0]).toEqual(newProduct);
+        expect(result.current.products.length).toBe(mockProducts.length + 1);
+      });
     });
   });
 
@@ -145,7 +149,9 @@ describe('useProducts Hook', () => {
       const response = await result.current.updateProduct('test-product-123', updates);
 
       expect(response.success).toBe(true);
-      expect(result.current.products[0]).toEqual(updatedProduct);
+      await waitFor(() => {
+        expect(result.current.products[0]).toEqual(updatedProduct);
+      });
       expect(api.updateProduct).toHaveBeenCalledWith('test-product-123', updates);
     });
 
@@ -179,9 +185,11 @@ describe('useProducts Hook', () => {
 
       await result.current.updateProduct('test-product-456', { price: 99.99 });
 
-      expect(result.current.products[0]).toEqual(mockProducts[0]); // Unchanged
-      expect(result.current.products[1]).toEqual(updatedProduct); // Updated
-      expect(result.current.products[2]).toEqual(mockProducts[2]); // Unchanged
+      await waitFor(() => {
+        expect(result.current.products[0]).toEqual(mockProducts[0]); // Unchanged
+        expect(result.current.products[1]).toEqual(updatedProduct); // Updated
+        expect(result.current.products[2]).toEqual(mockProducts[2]); // Unchanged
+      });
     });
   });
 
@@ -200,8 +208,10 @@ describe('useProducts Hook', () => {
       const response = await result.current.deleteProduct('test-product-123');
 
       expect(response.success).toBe(true);
-      expect(result.current.products.length).toBe(initialLength - 1);
-      expect(result.current.products.find(p => p.product_id === 'test-product-123')).toBeUndefined();
+      await waitFor(() => {
+        expect(result.current.products.length).toBe(initialLength - 1);
+        expect(result.current.products.find(p => p.productId === 'test-product-123')).toBeUndefined();
+      });
       expect(api.deleteProduct).toHaveBeenCalledWith('test-product-123');
     });
 
@@ -235,9 +245,11 @@ describe('useProducts Hook', () => {
 
       await result.current.deleteProduct('test-product-456');
 
-      expect(result.current.products).toContainEqual(mockProducts[0]);
-      expect(result.current.products).toContainEqual(mockProducts[2]);
-      expect(result.current.products).not.toContainEqual(mockProducts[1]);
+      await waitFor(() => {
+        expect(result.current.products).toContainEqual(mockProducts[0]);
+        expect(result.current.products).toContainEqual(mockProducts[2]);
+        expect(result.current.products).not.toContainEqual(mockProducts[1]);
+      });
     });
   });
 

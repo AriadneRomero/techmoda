@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test
@@ -7,11 +7,13 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock window.__ENV for tests
-globalThis.window = globalThis.window || ({} as any);
+// Mock window.__ENV for tests.
+// Usamos una Lambda Function URL con slash final (como las del sandbox AWS re/Start)
+// para ejercitar la normalización que hace api.ts (quita el slash final).
+globalThis.window = globalThis.window || ({} as Window & typeof globalThis);
 window.__ENV = {
-  VITE_API_URL: 'https://test-api.example.com/Prod'
+  VITE_API_URL: 'https://test-api.lambda-url.us-east-1.on.aws/'
 };
 
 // Mock fetch globally
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn();

@@ -1,5 +1,9 @@
 # Especificación de Función Lambda: CreateItem
 
+> 🏖️ **Sandbox AWS re/Start:** se invoca vía la **Lambda Function URL del router** (no API Gateway).
+> El evento es **Function URL payload v2.0**; el router reusa este handler. Ver
+> [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Propósito
 
 Agregar un nuevo producto al catálogo de moda TechModa realizando una operación PutItem de DynamoDB con UUID generado automáticamente y timestamps.
@@ -10,7 +14,7 @@ Agregar un nuevo producto al catálogo de moda TechModa realizando una operació
 
 **Ruta**: `/products`
 
-**Trigger**: Evento de API Gateway REST API con cuerpo JSON
+**Trigger**: Lambda Function URL (vía router) con cuerpo JSON — payload v2.0
 
 ## Esquema de Entrada
 
@@ -50,17 +54,20 @@ Content-Type: application/json
 }
 ```
 
-### Estructura de Evento API Gateway
+### Estructura de Evento (Lambda Function URL, payload v2.0)
 ```javascript
 {
-  "httpMethod": "POST",
-  "path": "/products",
+  "rawPath": "/products",
+  "requestContext": { "http": { "method": "POST" } },
   "headers": {
-    "Content-Type": "application/json"
+    "content-type": "application/json"
   },
-  "body": "{\"name\":\"Classic Denim Jacket\",\"price\":79.99}"
+  "body": "{\"name\":\"Classic Denim Jacket\",\"price\":79.99}",
+  "isBase64Encoded": false
 }
 ```
+*(El router lee `event.requestContext.http.method` + `event.rawPath` y, si `isBase64Encoded` es
+`true`, decodifica el body antes de pasarlo al handler.)*
 
 **Importante**: `event.body` es una cadena JSON, no un objeto. Debe parsearlo con `JSON.parse(event.body)`.
 
@@ -200,7 +207,7 @@ PutItem retorna una respuesta vacía en caso de éxito. La función debe retorna
    - Parámetros: TableName e Item
 
 7. Manejar caso exitoso
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 201
      * headers: Content-Type y CORS
      * body: JSON.stringify(product)
@@ -212,10 +219,13 @@ PutItem retorna una respuesta vacía en caso de éxito. La función debe retorna
 
 ## Comando Curl de Prueba
 
+> `API_URL` = Function URL del router (output `ApiUrl`), p. ej.
+> `https://<id>.lambda-url.us-east-1.on.aws`. `${API_URL%/}` quita la barra final.
+
 ### Crear Producto con Todos los Campos
 
 ```bash
-curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products \
+curl -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Classic Denim Jacket",
@@ -229,7 +239,7 @@ curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products 
 ### Crear Producto con Campos Mínimos
 
 ```bash
-curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products \
+curl -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Summer Dress",
@@ -240,7 +250,7 @@ curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products 
 ### Probar Validación (Nombre Faltante)
 
 ```bash
-curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products \
+curl -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{
     "price": 49.99
@@ -270,7 +280,7 @@ curl -X POST https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products 
 
 ```bash
 aws dynamodb scan \
-  --table-name techmoda-capstone-Products \
+  --table-name techmoda-ai-Products \
   --query "Items[*].[productId.S, name.S, price.N]"
 ```
 
@@ -282,7 +292,7 @@ Necesito implementar una función Lambda en Node.js 18.x que cree un nuevo produ
 Requisitos:
 - Nombre de función: CreateItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (POST /products con cuerpo JSON)
+- Trigger: Lambda Function URL vía router (POST /products con cuerpo JSON) — evento payload v2.0
 - Base de datos: Tabla DynamoDB (nombre de variable de entorno PRODUCTS_TABLE)
 - Validación de entrada: name y price son campos requeridos
 - Generar UUID para productId usando crypto.randomUUID()
@@ -308,7 +318,7 @@ Por favor genera:
 5. Generación de timestamps
 6. Operación PutItem de DynamoDB
 7. Respuestas de error apropiadas (400/500)
-8. Formato de respuesta API Gateway
+8. Formato de respuesta HTTP (Lambda Function URL)
 ```
 
 ## Notas de Implementación

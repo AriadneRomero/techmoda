@@ -62,29 +62,19 @@ Tu uso está **100% cubierto por Free Tier**.
 
 Tu uso está **100% cubierto por Free Tier**.
 
-### API Gateway
+### Lambda Function URLs
 
-**Modelo de Precios**: Pago por llamada API
+> 🏖️ **Sandbox AWS re/Start:** el frente HTTP son **Lambda Function URLs**, no API Gateway.
+
+**Modelo de Precios**: **sin costo adicional**. Las Function URLs no tienen cargo propio; cada petición
+se factura como una **invocación de Lambda** (ya contabilizada arriba). No hay tarifa por millón de
+solicitudes ni stage como en API Gateway.
 
 **Componentes de Costo**:
-- **Llamadas API REST**: $3.50 por millón de solicitudes (us-east-1)
+- **Invocaciones**: incluidas en el cálculo de Lambda (ver sección anterior)
 - **Transferencia de datos**: $0.09 por GB saliente (primer 1 GB gratis)
 
-**Uso Estimado**:
-- 50 solicitudes API durante desarrollo/pruebas
-- Tamaño promedio de respuesta: 2 KB por solicitud
-
-**Cálculo**:
-- Llamadas API: 50 × $3.50 / 1,000,000 = $0.000175
-- Transferencia de datos: 50 × 2 KB = 100 KB (muy por debajo de 1 GB de free tier)
-
-**Total API Gateway**: **~$0.00018** (efectivamente $0.00)
-
-**Cobertura de AWS Free Tier**:
-- Primer 1 millón de llamadas API por mes durante los primeros 12 meses (gratis)
-- Primer 1 GB de transferencia de datos saliente por mes (gratis)
-
-Tu uso está **100% cubierto por Free Tier** (si estás dentro de los primeros 12 meses).
+**Total Function URLs**: **$0.00** (solo se paga la invocación de Lambda, ya cubierta por Free Tier)
 
 ### CloudWatch Logs
 
@@ -150,7 +140,7 @@ Tu uso está **100% cubierto por Free Tier**.
 |---------|----------------|-------------------|
 | DynamoDB | $0.00034 | ✅ Totalmente cubierto |
 | Lambda | $0.00035 | ✅ Totalmente cubierto |
-| API Gateway | $0.00018 | ✅ Totalmente cubierto (primeros 12 meses) |
+| Lambda Function URLs | $0.00 | ✅ Sin costo adicional (se factura como invocación de Lambda) |
 | CloudWatch Logs | $0.00006 | ✅ Totalmente cubierto |
 | X-Ray | $0.00026 | ✅ Totalmente cubierto |
 | CloudFormation | $0.00 | ✅ Siempre gratis |
@@ -178,7 +168,7 @@ Las estimaciones anteriores asumen:
 Ejecuta la limpieza tan pronto hayas demostrado tu API funcionando:
 
 ```bash
-sam delete --stack-name techmoda-capstone
+sam delete --stack-name techmoda-ai --region us-east-1
 ```
 
 Esto previene cualquier cargo continuo, aunque serían mínimos.
@@ -222,7 +212,7 @@ Aunque este proyecto cuesta casi $0 durante el uso activo, los recursos de AWS p
 - La tabla DynamoDB continúa existiendo (costos mínimos de almacenamiento)
 - Los CloudWatch Logs continúan almacenando datos (costos mínimos de almacenamiento)
 - Las funciones Lambda permanecen desplegadas (sin costo a menos que se invoquen)
-- El endpoint API Gateway permanece activo (sin costo a menos que se llame)
+- Las Lambda Function URLs permanecen activas (sin costo a menos que se invoquen)
 
 **Mejor Práctica**: Elimina todos los recursos inmediatamente después de completar tu capstone para mantener una higiene limpia de AWS.
 
@@ -231,23 +221,23 @@ Aunque este proyecto cuesta casi $0 durante el uso activo, los recursos de AWS p
 La forma más rápida y segura de eliminar todos los recursos:
 
 ```bash
-sam delete --stack-name techmoda-capstone
+sam delete --stack-name techmoda-ai --region us-east-1
 ```
 
 **Prompts interactivos**:
 ```
-Are you sure you want to delete the stack techmoda-capstone in the region us-east-1 ? [y/N]: y
-Are you sure you want to delete the folder techmoda-capstone in S3 which contains the artifacts? [y/N]: y
+Are you sure you want to delete the stack techmoda-ai in the region us-east-1 ? [y/N]: y
+Are you sure you want to delete the folder techmoda-ai in S3 which contains the artifacts? [y/N]: y
 ```
 
 **Qué se elimina**:
-- Todas las 5 funciones Lambda
-- API Gateway REST API
+- Todas las 5 funciones Lambda (y la función router + funciones de IA)
+- Las Lambda Function URLs (se eliminan junto con sus funciones)
 - Tabla DynamoDB (incluyendo todos los datos)
 - Grupos de Log de CloudWatch
-- Roles de ejecución IAM
 - Metadatos del stack CloudFormation
 - Bucket S3 de despliegue (artefactos)
+- Los roles IAM de ejecución (uno por Lambda) — los creó el stack, se borran con el stack.
 
 **Duración**: 2-5 minutos
 
@@ -266,7 +256,7 @@ Este script ejecuta el mismo comando `sam delete` con prompts de confirmación.
 Si `sam delete` falla, elimina manualmente vía consola CloudFormation:
 
 1. Ve a la consola de AWS CloudFormation
-2. Selecciona tu stack (ej., `techmoda-capstone`)
+2. Selecciona tu stack (ej., `techmoda-ai`)
 3. Haz clic en el botón "Delete"
 4. Confirma la eliminación
 5. Espera a que el estado muestre `DELETE_COMPLETE`
@@ -280,35 +270,37 @@ Después de ejecutar `sam delete`, verifica que todos los recursos se hayan elim
 ### 1. Verificar CloudFormation
 
 ```bash
-aws cloudformation describe-stacks --stack-name techmoda-capstone
+aws cloudformation describe-stacks --stack-name techmoda-ai --region us-east-1
 ```
 
 **Salida esperada**: Mensaje de error indicando que el stack no existe:
 ```
 An error occurred (ValidationError) when calling the DescribeStacks operation:
-Stack with id techmoda-capstone does not exist
+Stack with id techmoda-ai does not exist
 ```
 
 ### 2. Verificar Funciones Lambda Eliminadas
 
 ```bash
-aws lambda list-functions --query "Functions[?contains(FunctionName, 'techmoda-capstone')]"
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'techmoda-ai')]"
 ```
 
-**Salida esperada**: Array vacío `[]`
+**Salida esperada**: Array vacío `[]` (las Function URLs se eliminan con sus funciones).
 
 ### 3. Verificar Tabla DynamoDB Eliminada
 
 ```bash
-aws dynamodb list-tables --query "TableNames[?contains(@, 'techmoda-capstone')]"
+aws dynamodb list-tables --query "TableNames[?contains(@, 'techmoda-ai')]"
 ```
 
 **Salida esperada**: Array vacío `[]`
 
-### 4. Verificar API Gateway Eliminada
+### 4. Verificar que no quedan Function URLs
 
 ```bash
-aws apigateway get-rest-apis --query "items[?contains(name, 'techmoda-capstone')]"
+# Las Function URLs viven sobre las funciones Lambda: si no hay funciones techmoda-ai,
+# tampoco quedan Function URLs. (No hay API Gateway que verificar en el sandbox.)
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'techmoda-ai')].FunctionName"
 ```
 
 **Salida esperada**: Array vacío `[]`
@@ -326,7 +318,7 @@ aws apigateway get-rest-apis --query "items[?contains(name, 'techmoda-capstone')
 
 **Causa**: CloudFormation esperando dependencias de recursos
 
-**Solución**: Espera 5-10 minutos. Algunos recursos (como API Gateway) tardan en eliminarse.
+**Solución**: Espera 5-10 minutos. Algunos recursos (como las Function URLs o la tabla DynamoDB) tardan en eliminarse.
 
 ### Problema: Estado DELETE_FAILED
 
@@ -338,7 +330,7 @@ aws apigateway get-rest-apis --query "items[?contains(name, 'techmoda-capstone')
 2. Elimina manualmente el recurso problemático en la Consola de AWS
 3. Reintenta la eliminación:
    ```bash
-   sam delete --stack-name techmoda-capstone --no-prompts
+   sam delete --stack-name techmoda-ai --region us-east-1 --no-prompts
    ```
 
 ### Problema: "Stack cannot be deleted while in status DELETE_FAILED"
@@ -347,7 +339,7 @@ aws apigateway get-rest-apis --query "items[?contains(name, 'techmoda-capstone')
 
 ```bash
 aws cloudformation delete-stack \
-  --stack-name techmoda-capstone \
+  --stack-name techmoda-ai --region us-east-1 \
   --retain-resources [ResourceLogicalId]
 ```
 
@@ -362,7 +354,7 @@ Reemplaza `[ResourceLogicalId]` con el recurso que falló al eliminarse (de la p
 ```bash
 # Encontrar el nombre del bucket
 aws cloudformation describe-stacks \
-  --stack-name techmoda-capstone \
+  --stack-name techmoda-ai --region us-east-1 \
   --query "Stacks[0].Parameters[?ParameterKey=='SAMDeploymentBucket'].ParameterValue" \
   --output text
 
@@ -370,21 +362,17 @@ aws cloudformation describe-stacks \
 aws s3 rm s3://YOUR_BUCKET_NAME --recursive
 
 # Reintentar eliminación
-sam delete --stack-name techmoda-capstone
+sam delete --stack-name techmoda-ai --region us-east-1
 ```
 
 ### Problema: Error de permisos durante la eliminación
 
-**Causa**: El usuario IAM carece de permisos necesarios
+**Causa**: El rol de ejecución carece de permisos necesarios
 
-**Solución**: Asegura que tu usuario IAM tenga estos permisos:
-- `cloudformation:DeleteStack`
-- `lambda:DeleteFunction`
-- `dynamodb:DeleteTable`
-- `apigateway:DELETE`
-- `iam:DeleteRole`
-
-Pide a tu instructor del bootcamp que verifique la política IAM.
+**Solución:** tu identidad de deploy/cleanup necesita permitir
+`cloudformation:DeleteStack`, `lambda:DeleteFunction` (incl. `lambda:DeleteFunctionUrlConfig`) y
+`dynamodb:DeleteTable`, más `iam:DeleteRole`/`iam:DeleteRolePolicy` para los roles que creó el stack.
+Si ves un error de permisos, confirmá con `aws sts get-caller-identity` qué identidad estás usando.
 
 ## Lista de Verificación Post-Limpieza
 
@@ -393,7 +381,7 @@ Después de eliminar exitosamente tu stack:
 ✅ Verificar que el stack CloudFormation se haya eliminado
 ✅ Confirmar que no quedan funciones Lambda
 ✅ Revisar que la lista de tablas DynamoDB esté vacía
-✅ Verificar que los endpoints API Gateway se eliminaron
+✅ Verificar que no quedan funciones Lambda con Function URLs (techmoda-ai)
 ✅ Revisar el Panel de Facturación (debe mostrar $0.00 en nuevos cargos)
 ✅ Guardar URL del repositorio GitHub para la entrega
 ✅ Conservar capturas de pantalla del API funcionando (si es requerido)
@@ -420,9 +408,8 @@ Monitorea cuánto Free Tier has consumido:
 
 1. AWS Console → Billing → Free Tier
 2. Revisar uso para:
-   - Lambda (invocaciones y tiempo de cómputo)
+   - Lambda (invocaciones y tiempo de cómputo; incluye las llamadas vía Function URL)
    - DynamoDB (capacidad de lectura/escritura)
-   - API Gateway (llamadas API)
    - CloudWatch Logs (ingesta)
 
 **Señales de alarma**:
@@ -440,13 +427,13 @@ Si excedes los límites de AWS Free Tier (improbable para este capstone), aquí 
 
 | Servicio | Costo |
 |---------|------|
-| API Gateway | 10,000 × $3.50/1M = $0.035 |
+| Lambda Function URLs | $0.00 (sin costo propio; se factura como invocación de Lambda) |
 | Lambda | 10,000 × $0.20/1M = $0.002 |
 | DynamoDB | Escrituras: $0.003, Lecturas: $0.001 |
 | CloudWatch | $0.001 |
 | X-Ray | $0.05 |
 
-**Total**: **~$0.09** (aún bajo $0.10)
+**Total**: **~$0.06** (aún bajo $0.10; sin el cargo de API Gateway, las Function URLs no añaden costo)
 
 ### Escenario: 1 Semana de Uso Activo
 
@@ -455,7 +442,7 @@ Si excedes los límites de AWS Free Tier (improbable para este capstone), aquí 
 | Almacenamiento DynamoDB | 0.001 GB × $0.25 = $0.00025 |
 | Almacenamiento CloudWatch | 0.01 GB × $0.03 = $0.0003 |
 | Lambda (inactivo) | $0.00 |
-| API Gateway (inactivo) | $0.00 |
+| Lambda Function URLs (inactivo) | $0.00 |
 
 **Total**: **~$0.0006** (menos de $0.001)
 
@@ -475,7 +462,7 @@ Incluso con uso extendido, los costos permanecen insignificantes.
 - [Detalles de AWS Free Tier](https://aws.amazon.com/free/) - Lista completa de servicios Free Tier
 - [Precios de DynamoDB](https://aws.amazon.com/dynamodb/pricing/) - Costos detallados de PAY_PER_REQUEST
 - [Precios de Lambda](https://aws.amazon.com/lambda/pricing/) - Precios de solicitudes y cómputo
-- [Precios de API Gateway](https://aws.amazon.com/api-gateway/pricing/) - Costos de API REST
+- [Lambda Function URLs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html) - Sin costo adicional sobre Lambda
 
 ## ¿Preguntas?
 

@@ -14,9 +14,9 @@ function App() {
 
   const { products, loading, error, createProduct, updateProduct, deleteProduct } = useProducts();
 
-  const handleSaveProduct = async (productData: Omit<Product, 'product_id' | 'created_at' | 'updated_at'>) => {
+  const handleSaveProduct = async (productData: Omit<Product, 'productId' | 'createdAt' | 'updatedAt'>) => {
     if (editingProduct) {
-      const result = await updateProduct(editingProduct.product_id, productData);
+      const result = await updateProduct(editingProduct.productId, productData);
       if (result.success) {
         setEditingProduct(undefined);
       } else {
@@ -122,11 +122,13 @@ function App() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          // role="status" + aria-live: un lector de pantalla anuncia la carga.
+          <div role="status" aria-live="polite" className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" aria-hidden="true" />
+            <span className="sr-only">Cargando productos…</span>
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             Error: {error}
           </div>
         ) : filteredProducts.length === 0 ? (
@@ -145,7 +147,7 @@ function App() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
-                key={product.product_id}
+                key={product.productId}
                 product={product}
                 isAdmin={isAdmin}
                 onEdit={handleEdit}

@@ -2,6 +2,13 @@
 
 Estos prompts le ayudan a implementar las 5 funciones Lambda para la API del catálogo de productos de TechModa usando Claude Code.
 
+> 🏖️ **Sandbox AWS re/Start:** el frente HTTP es una **Lambda Function URL** (no API Gateway). El
+> evento que recibe cada handler es de **Function URL (payload v2.0)**: el método está en
+> `event.requestContext.http.method` y la ruta en `event.rawPath`. Un **router**
+> (`functions/router/index.js`) parsea esos campos, reconstruye `pathParameters.id` y reusa los 5
+> handlers. El "formato de respuesta" sigue siendo `{ statusCode, headers, body }`. Ver
+> [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Prompt 2.1: Implementar Función ListItems
 
 ```
@@ -10,7 +17,7 @@ I need to implement a Lambda function in Node.js 18.x that lists all products fr
 Requirements:
 - Function name: ListItems
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (GET /products)
+- Trigger: Lambda Function URL via router (GET /products) — event is Function URL payload v2.0
 - Database: DynamoDB table (name from environment variable PRODUCTS_TABLE)
 - Operation: Scan all items
 - Response: JSON array of products with HTTP 200
@@ -31,7 +38,7 @@ Please generate:
 1. Complete index.js file with exports.handler function
 2. AWS SDK v3 imports for DynamoDB
 3. Error handling with try/catch
-4. API Gateway response format (statusCode, headers, body)
+4. HTTP response format (statusCode, headers, body) — works for Lambda Function URL
 5. Comments explaining each section
 ```
 
@@ -43,7 +50,7 @@ I need to implement a Lambda function in Node.js 18.x that creates a new product
 Requirements:
 - Function name: CreateItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (POST /products with JSON body)
+- Trigger: Lambda Function URL via router (POST /products with JSON body) — Function URL payload v2.0
 - Database: DynamoDB table (name from environment variable PRODUCTS_TABLE)
 - Input validation: name and price are required fields
 - Generate UUID for productId using crypto.randomUUID()
@@ -69,7 +76,7 @@ Please generate:
 5. Timestamp generation
 6. DynamoDB PutItem operation
 7. Proper error responses (400/500)
-8. API Gateway response format
+8. HTTP response format (Lambda Function URL)
 ```
 
 ## Prompt 2.3: Implementar Función GetItem
@@ -80,7 +87,7 @@ I need to implement a Lambda function in Node.js 18.x that retrieves a single pr
 Requirements:
 - Function name: GetItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (GET /products/{id})
+- Trigger: Lambda Function URL via router (GET /products/{id}) — router rebuilds event.pathParameters.id from rawPath
 - Path parameter: id (productId)
 - Database: DynamoDB table (name from environment variable PRODUCTS_TABLE)
 - Operation: GetItem by productId
@@ -96,7 +103,7 @@ Please generate:
 4. Check if item exists
 5. Return 404 if not found, 200 if found
 6. Error handling with try/catch
-7. API Gateway response format
+7. HTTP response format (Lambda Function URL)
 ```
 
 ## Prompt 2.4: Implementar Función UpdateItem
@@ -107,7 +114,7 @@ I need to implement a Lambda function in Node.js 18.x that updates an existing p
 Requirements:
 - Function name: UpdateItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (PUT /products/{id} with JSON body)
+- Trigger: Lambda Function URL via router (PUT /products/{id} with JSON body) — router rebuilds event.pathParameters.id
 - Path parameter: id (productId)
 - Database: DynamoDB table (name from environment variable PRODUCTS_TABLE)
 - Check if product exists before updating
@@ -132,7 +139,7 @@ Please generate:
 5. Update timestamp
 6. AWS SDK v3 DynamoDB UpdateItem
 7. Return 404 if not found
-8. API Gateway response format
+8. HTTP response format (Lambda Function URL)
 ```
 
 ## Prompt 2.5: Implementar Función DeleteItem
@@ -143,7 +150,7 @@ I need to implement a Lambda function in Node.js 18.x that deletes a product fro
 Requirements:
 - Function name: DeleteItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (DELETE /products/{id})
+- Trigger: Lambda Function URL via router (DELETE /products/{id}) — router rebuilds event.pathParameters.id
 - Path parameter: id (productId)
 - Database: DynamoDB table (name from environment variable PRODUCTS_TABLE)
 - Operation: DeleteItem by productId
@@ -159,7 +166,7 @@ Please generate:
 3. AWS SDK v3 DynamoDB DeleteItem
 4. Success response with confirmation message
 5. Error handling with try/catch
-6. API Gateway response format
+6. HTTP response format (Lambda Function URL)
 ```
 
 ## Instrucciones de Uso
@@ -181,7 +188,7 @@ Claude Code generará un archivo `index.js` completo con:
 - Inicialización del cliente DynamoDB
 - Función handler de Lambda
 - Manejo de errores
-- Formato de respuesta de API Gateway
+- Formato de respuesta HTTP (Lambda Function URL)
 
 ### Paso 4: Guardar en la Ubicación Correcta
 
@@ -225,7 +232,7 @@ Please help me:
 ### Si el Formato de Respuesta es Incorrecto
 
 ```
-My Lambda function executes successfully but API Gateway returns a 502 Bad Gateway error.
+My Lambda function executes successfully but the Lambda Function URL returns a 502 Bad Gateway error.
 
 Function name: [function name]
 
@@ -233,7 +240,7 @@ CloudWatch Logs show:
 [Paste relevant log entries]
 
 I think the issue is with the response format. Please help me:
-1. Verify the API Gateway response format is correct
+1. Verify the Lambda Function URL response format is correct (statusCode, headers, body)
 2. Check statusCode, headers, and body structure
 3. Ensure body is JSON.stringify() not a plain object
 ```

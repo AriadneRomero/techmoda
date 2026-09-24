@@ -4,6 +4,13 @@
 
 Esta rúbrica evalúa las entregas de los estudiantes en tres dimensiones: **Excelencia Técnica (30%)**, **Documentación (15%)** y **Relevancia Empresarial (15%)**, totalizando **60% de la calificación general del bootcamp**.
 
+> 🔌 **Al evaluar:** el CRUD se expone con **una Lambda Function URL** + **router**, y cada función
+> declara sus `Policies:` para que SAM le cree un rol de mínimo privilegio. Stack **`techmoda-ai`**,
+> región **us-east-1**. **No** penalizar la ausencia de API Gateway — es lo correcto en este diseño.
+> **Sí** esperar `Policies:` acotadas: un `Role:` compartido, un `servicio:*` o un `Resource: "*"`
+> evitable son hallazgos válidos. Ver [../docs/SANDBOX-COMPAT.md](../docs/SANDBOX-COMPAT.md) y
+> [../docs/IAM.md](../docs/IAM.md).
+
 ## Requisitos de Entrega
 
 **Entregable**: URL del repositorio GitHub que contenga:
@@ -93,21 +100,21 @@ Esta rúbrica evalúa las entregas de los estudiantes en tres dimensiones: **Exc
 
 **Crédito Completo (5%)**:
 - ✅ Sintaxis YAML válida (sin errores de sintaxis)
-- ✅ Las 5 funciones Lambda definidas con propiedades correctas (Handler, Runtime, CodeUri, Policies)
-- ✅ API Gateway configurado con rutas apropiadas (GET, POST, PUT, DELETE)
+- ✅ Las 5 funciones Lambda + router definidas con propiedades correctas (Handler, Runtime, CodeUri, Role)
+- ✅ Function URL en el router con rutas CRUD funcionando (sin `AWS::Serverless::Api` ni `Events: Type: Api`)
 - ✅ Tabla DynamoDB definida con esquema correcto (productId como clave)
-- ✅ Políticas IAM otorgan permisos necesarios (DynamoDBReadPolicy, DynamoDBCrudPolicy)
+- ✅ Cada función declara `Policies:` acotadas y **no** tiene `Role:` (excluyentes en SAM)
 - ✅ Variables de entorno inyectan nombre de tabla (PRODUCTS_TABLE: !Ref ProductsTable)
-- ✅ Sección Outputs incluye URL de API Gateway
+- ✅ Sección Outputs incluye la Function URL (`ApiUrl`)
 
 **Crédito Parcial (2-4%)**:
 - Problemas menores pero despliega exitosamente (4%)
 - Faltan algunas propiedades pero funcional (3%)
-- Políticas IAM excesivamente permisivas (2%)
+- Quedó algún `Policies:` junto a `Role:` o un `AWS::Serverless::Api` residual (2%)
 
 **Sin Crédito (0%)**:
 - YAML inválido (el despliegue falla)
-- Faltan recursos críticos (funciones Lambda, API Gateway, DynamoDB)
+- Faltan recursos críticos (funciones Lambda, Function URL/router, DynamoDB)
 - El template no despliega
 
 **Consejos de Evaluación**:
@@ -169,7 +176,7 @@ Esta rúbrica evalúa las entregas de los estudiantes en tres dimensiones: **Exc
 
 **Crédito Completo (5%)**:
 - ✅ Diagrama presente (arte ASCII basado en texto, diagrams.py, draw.io, o imagen)
-- ✅ Muestra todos los componentes clave (API Gateway, funciones Lambda, DynamoDB)
+- ✅ Muestra todos los componentes clave (Lambda Function URL + router, funciones Lambda, DynamoDB)
 - ✅ Indica flujo de solicitud (flechas o similar)
 - ✅ Claro y comprensible
 - ✅ Etiquetado apropiadamente
@@ -235,7 +242,7 @@ Esta rúbrica evalúa las entregas de los estudiantes en tres dimensiones: **Exc
 **Crédito Completo (5%)**:
 - ✅ Arquitectura serverless justificada para el caso de uso (escalabilidad, costo)
 - ✅ DynamoDB adecuado para catálogo de productos (key-value simple, lecturas rápidas)
-- ✅ API Gateway apropiado para REST API
+- ✅ Lambda Function URL + router apropiado para exponer la API (compatible con el sandbox)
 - ✅ Runtime Node.js 18.x para Lambda
 - ✅ Las decisiones de diseño demuestran comprensión de trade-offs
 
@@ -310,9 +317,9 @@ Esta rúbrica evalúa las entregas de los estudiantes en tres dimensiones: **Exc
 
 ### Paso 2: Prueba de Despliegue
 1. Ejecutar `sam build`
-2. Ejecutar `sam deploy --guided` (usar nombre de stack único)
+2. Ejecutar `sam deploy --stack-name techmoda-ai --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --resolve-s3`
 3. Anotar éxito/fallo del despliegue
-4. Capturar URL de API Gateway
+4. Capturar la Function URL (output `ApiUrl`)
 
 ### Paso 3: Pruebas Funcionales
 1. Probar las 5 operaciones CRUD con curl

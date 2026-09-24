@@ -1,539 +1,238 @@
-# TechModa Serverless Capstone
+# TechModa AI — Capstone AWS re/Start · AI Practitioner (AIF-C01)
 
-[![Abrir en GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=master&repo=gabanox/techmoda-serverless-capstone-starter)
+> **Bootcamp Institute · AWS re/Start**
+> Versión **AI Practitioner** del capstone serverless de e-commerce *TechModa*.
+> Tomamos una tienda de moda serverless ya funcional (Lambda Function URLs + DynamoDB + React)
+> y le agregamos, **una sesión de 1 hora a la vez**, capacidades de **IA preentrenada y generativa**
+> de AWS. Cada sesión es autocontenida: se despliega y se ve funcionar en ~60 minutos.
 
-API de Catálogo de Productos de E-commerce de Moda construida con Tecnologías Serverless de AWS
+> 🔌 **Dos decisiones de arquitectura.** (1) **Sin API Gateway**: la API se expone con **Lambda
+> Function URLs** — ver **[`docs/SANDBOX-COMPAT.md`](docs/SANDBOX-COMPAT.md)**. (2) **IAM de mínimo
+> privilegio por función**: cada Lambda declara sus `Policies:` y SAM le crea su rol — ver
+> **[`docs/IAM.md`](docs/IAM.md)**, léelo antes de agregar funciones. Necesitás una cuenta AWS donde
+> puedas **crear roles IAM** (`iam:CreateRole`).
 
----
-
-## 🚀 NUEVO: Despliegue en 10 Minutos
-
-**¿Primera vez aquí?** Las funciones Lambda ya están implementadas y listas para desplegar.
-
-👉 **Lee el [QUICKSTART.md](QUICKSTART.md)** para desplegar en 10 minutos
-
----
-
-## 🎯 Scripts Simplificados para Alumnos
-
-Hemos creado scripts simplificados para hacer el despliegue y gestión más fácil:
-
-### Desplegar Todo (Backend + Frontend)
-```bash
-./scripts/deploy-all.sh
-```
-Este script hace TODO automáticamente:
-- ✅ Construye el backend (SAM)
-- ✅ Despliega el backend a AWS
-- ✅ Construye el frontend (React)
-- ✅ Despliega el frontend a S3/CloudFront
-- ✅ Te muestra las URLs al finalizar
-
-### Ver Estado del Despliegue
-```bash
-./scripts/status.sh
-```
-Muestra:
-- Estado actual del stack
-- URLs de API y Frontend
-- Número de productos en la base de datos
-- Comandos útiles
-
-### Eliminar Todos los Recursos
-```bash
-./scripts/delete-all.sh
-```
-Elimina TODO para evitar cargos:
-- API Gateway
-- Funciones Lambda
-- Tabla DynamoDB
-- Bucket S3 y CloudFront
-
-**💡 Recomendación**: Usa estos scripts para una experiencia más simple y directa.
+> 📄 La documentación del **capstone serverless base** (sin IA) se conserva en
+> [`README-BASE-SERVERLESS.md`](README-BASE-SERVERLESS.md).
 
 ---
 
-## Inicio Rápido con GitHub Codespaces
+## 🎯 Visión
 
-**Recomendado**: Usa GitHub Codespaces para un entorno de desarrollo preconfigurado con AWS CLI, SAM CLI y Node.js 18.x ya instalados.
+TechModa es una boutique de moda online. Su catálogo serverless ya hace el CRUD básico de productos.
+El reto del/la egresado/a de re/Start es **convertir ese catálogo en un producto "AI-powered"** usando
+exclusivamente servicios administrados de IA de AWS — **sin entrenar un solo modelo**. Ese es justo el
+corazón del examen **AWS Certified AI Practitioner (AIF-C01)**: saber **elegir y aplicar** el servicio
+de IA correcto para cada problema de negocio, entendiendo sus capacidades, costos, riesgos y controles.
 
-1. Haz clic en el botón **"Abrir en GitHub Codespaces"** arriba
-2. Espera a que el entorno se construya (2-3 minutos)
-3. **Configura las credenciales de AWS** - Consulta [AWS_CREDENTIALS_SETUP.md](AWS_CREDENTIALS_SETUP.md) para instrucciones detalladas
-4. Sigue la [Guía de Implementación](#guía-de-implementación) a continuación
+Al terminar las 12 sesiones, TechModa:
 
-### Configuración de Credenciales de AWS
+- **Etiqueta y modera** sus fotos de producto automáticamente (Rekognition).
+- Genera **texto alternativo accesible** para cada imagen (Rekognition + accesibilidad).
+- Entiende el **sentimiento** de las reseñas de clientes (Comprehend).
+- Ofrece su catálogo **bilingüe ES↔EN** sin traductores humanos (Translate).
+- Lee las descripciones **en voz alta** para accesibilidad (Polly).
+- **Redacta descripciones de producto** a partir de atributos (Bedrock — IA generativa).
+- Tiene **búsqueda semántica / RAG** sobre el catálogo (Bedrock embeddings).
+- Incluye un **asistente de compras conversacional** (Bedrock — chatbot + prompt engineering).
+- Aplica **guardrails, control de sesgo y privacidad** sobre todas sus features de IA (Bedrock Guardrails).
+- Opera con **IAM de mínimo privilegio, logging de invocación y control de costos** (gobernanza).
 
-Antes de desplegar, debes configurar las credenciales de AWS en GitHub:
+---
 
-1. Ve a la **Configuración** de tu repositorio → **Secrets and variables** → **Codespaces**
-2. Agrega tres secretos:
-   - `AWS_ACCESS_KEY_ID` - Tu clave de acceso de AWS
-   - `AWS_SECRET_ACCESS_KEY` - Tu clave secreta de AWS
-   - `AWS_DEFAULT_REGION` - Tu región de AWS (ej., `us-east-1`)
-3. Reconstruye tu Codespace para cargar las credenciales
+## 🗺️ Mapa de las 12 sesiones
 
-Para instrucciones detalladas paso a paso con capturas de pantalla, consulta **[AWS_CREDENTIALS_SETUP.md](AWS_CREDENTIALS_SETUP.md)**.
+| # | Sesión | Servicio de IA | Dominio AIF-C01 | Estado |
+|---|--------|----------------|-----------------|--------|
+| **S0** | [Desplegar TechModa base (CRUD serverless)](sessions/S00-base/GUIA.md) | — | Cimiento | ✅ Completa |
+| **S1** | [Auto-etiquetado de imágenes de producto](sessions/S01-rekognition-labels/GUIA.md) | Rekognition `DetectLabels` | D1 (20%) | ✅ Completa |
+| **S2** | [Moderación de imágenes + alt-text accesible](sessions/S02-moderation-alttext/GUIA.md) | Rekognition `DetectModerationLabels` | D4 (14%) | ✅ Completa |
+| **S3** | [Sentimiento de reseñas](sessions/S03-comprehend-sentiment/GUIA.md) | Comprehend `DetectSentiment` | D1 (20%) | ✅ Completa |
+| **S4** | [Catálogo multilingüe ES↔EN](sessions/S04-translate-multilang/GUIA.md) | Translate `TranslateText` | D1 (20%) | ✅ Completa |
+| **S5** | [Descripción por voz (accesibilidad)](sessions/S05-polly-voice/GUIA.md) | Polly `SynthesizeSpeech` | D1 + D4 | ✅ Completa |
+| **S6** | [Generar descripciones desde atributos](sessions/S06-bedrock-descripciones/GUIA.md) | Bedrock `InvokeModel` | D2 (24%) | ✅ Completa |
+| **S7** | [Búsqueda semántica / RAG sobre el catálogo](sessions/S07-bedrock-rag-busqueda/GUIA.md) | Bedrock embeddings | D3 (28%) | ✅ Completa |
+| **S8** | [Asistente de compras (chatbot)](sessions/S08-bedrock-chatbot/GUIA.md) | Bedrock + prompt engineering | D2 + D3 | ✅ Completa |
+| **S9** | [Guardrails, sesgo y privacidad](sessions/S09-guardrails-sesgo/GUIA.md) | Bedrock Guardrails | D4 (14%) | 🟡 Guía detallada + scaffold |
+| **S10** | [IAM mínimo privilegio, logging, costos](sessions/S10-iam-logging-costos/GUIA.md) | — (gobernanza) | D5 (14%) | 🟡 Guía detallada + scaffold |
+| **S11** | [Integración final, demo, documentación, cleanup](sessions/S11-integracion-demo-cleanup/GUIA.md) | — (cierre) | Todos | 🟡 Guía detallada + scripts |
 
-## Descripción General
+> **Leyenda de estado**
+> ✅ **Completa** = código funcional (Lambda Python + boto3), snippet de `template.yaml` listo para pegar, y GUIA.md paso a paso.
+> 🟡 **Guía + scaffold** = GUIA.md detallada con conceptos, pasos y "qué entra en el examen", más esqueleto de código/política para completar en la sesión.
 
-TechModa es una API REST serverless para gestionar un catálogo de productos de e-commerce de moda. Este proyecto capstone demuestra dominio de patrones de arquitectura serverless de AWS utilizando Lambda, API Gateway y DynamoDB.
+---
 
-### Objetivos de Aprendizaje
+## 📚 Mapa AIF-C01: dominios ↔ sesiones
 
-Al completar este proyecto, podrás:
+El examen **AIF-C01** distribuye sus preguntas en 5 dominios. Verificado contra la
+[guía oficial del examen (AWS)](https://docs.aws.amazon.com/aws-certification/latest/examguides/ai-practitioner-01.html)
+el **2026-06-17**:
 
-- Diseñar arquitecturas serverless usando Lambda, API Gateway y DynamoDB
-- Implementar APIs RESTful con métodos HTTP apropiados y códigos de estado
-- Desplegar infraestructura como código usando AWS SAM
-- Probar APIs manualmente usando curl e interpretar respuestas
-- Depurar aplicaciones serverless usando CloudWatch Logs y X-Ray
-- Estimar y gestionar costos de AWS para aplicaciones serverless
-- Usar herramientas de IA efectivamente (Claude Code) para acelerar el desarrollo
-- Documentar proyectos técnicos para propósitos de portafolio
-- Seguir las mejores prácticas de AWS para seguridad y observabilidad
+| Dominio | Nombre | Peso | Sesiones que lo cubren |
+|---------|--------|------|------------------------|
+| **D1** | Fundamentals of AI and ML | **20%** | S1, S3, S4, S5 |
+| **D2** | Fundamentals of Generative AI | **24%** | S6, S8 |
+| **D3** | Applications of Foundation Models | **28%** | S7, S8 |
+| **D4** | Guidelines for Responsible AI | **14%** | S2, S5, S9 |
+| **D5** | Security, Compliance & Governance for AI | **14%** | S10, S11 |
 
-## Arquitectura
+> **D2 + D3 = 52% del examen** → la mitad del peso es **IA generativa y foundation models**.
+> Por eso las sesiones S6–S8 (Bedrock) concentran el mayor valor pedagógico.
+>
+> ⚠️ Los pesos pueden cambiar entre versiones del examen. **Verificá siempre la guía oficial vigente** antes de presentar.
+
+---
+
+## 🏗️ Arquitectura
 
 ```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│   Cliente   │─────▶│ API Gateway │─────▶│   Lambda    │─────▶│  DynamoDB   │
-│  (curl/     │◀─────│   (REST)    │◀─────│ (Node.js)   │◀─────│   (NoSQL)   │
-│  navegador) │      └─────────────┘      └─────────────┘      └─────────────┘
-└─────────────┘              │                     │
-                             │                     │
-                             ▼                     ▼
-                      ┌─────────────┐      ┌─────────────┐
-                      │  CloudWatch │      │   X-Ray     │
-                      │    Logs     │      │   Tracing   │
-                      └─────────────┘      └─────────────┘
+                    ┌──────────────────────────────────────────────┐
+                    │      Frontend React (S3 + CloudFront)        │
+                    └───────────────────────┬──────────────────────┘
+                                            │ HTTPS
+              ┌─────────────────────────────┼──────────────────────────────┐
+              │ Lambda Function URLs (AuthType NONE, CORS *) — sin API GW   │
+              └──────┬───────────────────────────────────┬─────────────────┘
+                     ▼ (1 Function URL)                   ▼ (1 URL por función IA)
+        Router CRUD (Node.js, base S0)        AI Lambdas (S1–S8, Python + boto3)
+        functions/router/index.js             ├─ enrich-labels      → Rekognition
+          ├─ list/create/get/update/delete     ├─ moderate-image     → Rekognition
+          (reusa las 5 Lambdas CRUD)           ├─ analyze-sentiment  → Comprehend
+                     │                          ├─ translate-catalog  → Translate
+                     │                          ├─ synthesize-voice   → Polly (+ S3 audio)
+                     │                          ├─ generate-desc      → Bedrock
+                     │                          ├─ semantic-search    → Bedrock (embeddings)
+                     │                          └─ shopping-assistant → Bedrock (chat)
+                     │   (cada una con su rol de mínimo privilegio creado por SAM)
+                     ▼
+              ┌────────────────────────────┐
+              │   DynamoDB  (Products)     │
+              └────────────────────────────┘
 ```
 
-### Componentes
+- **Base (S0):** **Lambda Function URL** (router CRUD Node.js) + DynamoDB + Frontend React, vía **AWS SAM**. Sin API Gateway.
+- **IA (S1–S8):** cada sesión agrega 1 Lambda **Python 3.12 + boto3** (con su propia Function URL) que llama a un servicio de IA administrado y **escribe el resultado de vuelta en DynamoDB** o lo retorna.
+- **IaC:** todo es **AWS SAM** (`template.yaml`). Cada sesión trae un `template-snippet.yaml` con el recurso nuevo (Function URL + `Policies:` acotadas), listo para pegar.
+- **IAM:** un rol de mínimo privilegio por función, creado por SAM → ver **[`docs/IAM.md`](docs/IAM.md)**.
 
-- **API Gateway**: API REST con 5 endpoints para operaciones CRUD
-- **Lambda Functions**: 5 funciones Node.js 18.x (ListItems, CreateItem, GetItem, UpdateItem, DeleteItem)
-- **DynamoDB**: Base de datos NoSQL con facturación PAY_PER_REQUEST
-- **CloudWatch**: Registro centralizado para ejecución de Lambda
-- **X-Ray**: Rastreo distribuido para observabilidad de rendimiento
+---
 
-Para documentación detallada de arquitectura, consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+## ✅ Prerequisitos
 
-## Prerequisitos
+1. **Una cuenta AWS donde puedas crear roles IAM** (`iam:CreateRole`).
+   - El stack crea un rol de ejecución de mínimo privilegio **por Lambda**; sin ese permiso el deploy
+     falla y CloudFormation revierte el stack entero. Ver [`docs/SANDBOX-COMPAT.md`](docs/SANDBOX-COMPAT.md) §2.
+   - Región de trabajo: **`us-east-1`** (Norte de Virginia). Podés cambiarla: nada está atado a la región.
+2. Herramientas: **AWS SAM CLI**, **AWS CLI v2**, **Node.js 22+**, **Python 3.12** (tiene que coincidir
+   con el `Runtime` de las Lambdas de IA), **git**. El devcontainer de este repo las trae fijadas.
+3. **Acceso a modelos de Bedrock** habilitado para S6–S9:
+   Consola → **Amazon Bedrock → Model access** → habilitar los modelos que uses (Anthropic Claude Haiku
+   y Amazon Titan Embeddings). Es un setting **por región**: habilitalo en la región del deploy.
 
-Antes de comenzar, asegúrate de tener:
+> ✅ **Chequeo de un comando antes de tocar AWS:** `bash scripts/validate-all.sh --static`
+> (herramientas, los 3 templates, los 8 snippets, sintaxis, frontend y coherencia del repo).
+> Con el stack ya desplegado, `bash scripts/validate-all.sh` prueba además el CRUD y las 9 features de IA.
 
-- **Cuenta de AWS** con permisos apropiados
-- **AWS CLI v2** instalado y configurado ([Guía de Instalación](docs/prompts/01_ENVIRONMENT_SETUP.md))
-- **AWS SAM CLI** instalado ([Guía de Instalación](docs/prompts/01_ENVIRONMENT_SETUP.md))
-- **Node.js 18.x** o posterior
-- **Git** para control de versiones
-- **Conocimiento básico** de JavaScript, APIs REST y servicios de AWS
+---
 
-## Guía de Implementación
-
-**🚀 Opción Rápida**: Si quieres desplegar todo de una vez, usa `./scripts/deploy-all.sh` (ver [Scripts Simplificados](#-scripts-simplificados-para-alumnos) arriba)
-
-**📚 Opción Paso a Paso**: Sigue esta guía para entender cada paso del proceso
-
-### 1. Clonar el Repositorio
-
-**Nota**: Si usas Codespaces, omite este paso - el repositorio ya está clonado.
+## 🚀 Cómo desplegar la base (S0)
 
 ```bash
-git clone <repository-url>
-cd techmoda-serverless-capstone-starter
-```
+# 1. Clonar el repo dentro del VS Code IDE del sandbox
+git clone <este-repo> techmoda-ai-capstone && cd techmoda-ai-capstone
 
-### 2. Revisar la Estructura del Proyecto
+# 2. Configurar SAM para us-east-1
+cp samconfig.us-east-1.example samconfig.toml
 
-```
-techmoda-serverless-capstone-starter/
-├── template.yaml              # Plantilla SAM (infraestructura como código)
-├── functions/                 # Código fuente de funciones Lambda
-│   ├── list-items/           # GET /products
-│   ├── create-item/          # POST /products
-│   ├── get-item/             # GET /products/{id}
-│   ├── update-item/          # PUT /products/{id}
-│   └── delete-item/          # DELETE /products/{id}
-├── frontend/                  # Frontend React (opcional)
-├── docs/                      # Documentación
-│   ├── specs/                # Especificaciones detalladas de funciones
-│   └── prompts/              # Plantillas de prompts para Claude Code
-├── scripts/                   # Scripts auxiliares de despliegue
-│   ├── build.sh              # Construir la aplicación SAM
-│   ├── deploy.sh             # Desplegar a AWS
-│   ├── delete.sh             # Limpiar recursos
-│   ├── build-frontend.sh     # Construir el frontend
-│   └── deploy-frontend.sh    # Desplegar frontend a S3
-└── README.md                  # Este archivo
-```
-
-### 3. Implementar las Funciones Lambda
-
-Cada función Lambda en el directorio `functions/` contiene código de marcador con comentarios TODO. Sigue estos pasos:
-
-1. **Lee la especificación** de cada función en `docs/specs/`
-2. **Usa las plantillas de prompts** en `docs/prompts/02_LAMBDA_IMPLEMENTATION.md` con Claude Code
-3. **Implementa la lógica de negocio** siguiendo el enfoque de desarrollo guiado por especificaciones
-4. **Prueba localmente** (opcional) o despliega y prueba en AWS
-
-Consulta [CAPSTONE_OVERVIEW.md](CAPSTONE_OVERVIEW.md) para orientación detallada de implementación.
-
-### 4. Construir la Aplicación
-
-```bash
-# Usando el script auxiliar
-./scripts/build.sh
-
-# O directamente con SAM CLI
+# 3. Construir y desplegar (atajo: bash scripts/deploy.sh)
 sam build
+sam deploy --stack-name techmoda-ai --region us-east-1 \
+  --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+  --resolve-s3 --no-confirm-changeset
+
+# 4. (opcional) cargar productos de ejemplo CON imágenes para las sesiones de IA
+bash ai/seed/seed-products.sh
+
+# 5. Construir y publicar el frontend
+bash scripts/deploy-frontend.sh
 ```
 
-Este comando:
-- Instala las dependencias de Node.js para cada función
-- Prepara el paquete de despliegue
-- Crea el directorio `.aws-sam/build/`
-
-### 5. Desplegar a AWS
-
-#### Primer Despliegue (Guiado)
-
-```bash
-# Usando el script auxiliar
-./scripts/deploy.sh
-
-# O directamente con SAM CLI
-sam deploy --guided
-```
-
-**IMPORTANTE**: Se te harán varias preguntas. Usa estos valores:
-
-```
-Stack Name [techmoda-capstone]: tu-nombre-con-guiones-medios
-AWS Region [us-east-1]:
-#Shows you resources changes to be deployed and require a 'Y' to initiate deploy
-Confirm changes before deploy [Y/n]: y
-#SAM needs permission to be able to create roles to connect to the resources in your template
-Allow SAM CLI IAM role creation [Y/n]: y
-#Preserves the state of previously provisioned resources when an operation fails
-Disable rollback [y/N]: y
-ListItemsFunction has no authentication. Is this okay? [y/N]: y
-CreateItemFunction has no authentication. Is this okay? [y/N]: y
-GetItemFunction has no authentication. Is this okay? [y/N]: y
-UpdateItemFunction has no authentication. Is this okay? [y/N]: y
-DeleteItemFunction has no authentication. Is this okay? [y/N]: y
-Save arguments to configuration file [Y/n]: y
-SAM configuration file [samconfig.toml]:
-SAM configuration environment [default]:
-```
-
-**Notas**:
-- **Stack Name**: Reemplaza `tu-nombre-con-guiones-medios` con tu nombre real usando guiones (ej., `juan-perez`, `maria-garcia`)
-- **AWS Region**: Presiona Enter para usar el valor predeterminado `us-east-1` (o ingresa tu región preferida)
-- **Advertencias de no autenticación**: Esto es esperado para este proyecto educativo (no estamos usando API keys o Cognito)
-
-#### Despliegues Subsiguientes
-
-```bash
-# Usando el script auxiliar
-./scripts/deploy.sh
-
-# O directamente con SAM CLI
-sam deploy
-```
-
-### 6. Probar tu API
-
-Después del despliegue, recibirás una URL de API en las salidas:
-
-```
-Outputs:
-  ApiUrl: https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod
-```
-
-Copia esta URL y prueba tus endpoints usando curl. Consulta [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) para instrucciones completas de prueba.
-
-**Ejemplo de prueba rápida:**
-
-```bash
-# Configura tu URL de API
-export API_URL="https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod"
-
-# Crea un producto
-curl -X POST $API_URL/products \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Classic Denim Jacket",
-    "description": "Timeless blue denim jacket",
-    "price": 79.99,
-    "category": "Outerwear",
-    "imageUrl": "https://example.com/jacket.jpg"
-  }'
-
-# Lista todos los productos
-curl $API_URL/products
-```
-
-### 7. Ver Logs de CloudWatch
-
-Para debugging y monitoreo, puedes ver los logs de tus funciones Lambda:
-
-#### Ver todos los logs (últimos 10 minutos)
-```bash
-./scripts/logs.sh
-```
-
-#### Ver logs de una función específica
-```bash
-./scripts/logs.sh list      # ListItemsFunction
-./scripts/logs.sh create    # CreateItemFunction
-./scripts/logs.sh get       # GetItemFunction
-./scripts/logs.sh update    # UpdateItemFunction
-./scripts/logs.sh delete    # DeleteItemFunction
-```
-
-#### Live tail (seguir logs en tiempo real)
-```bash
-./scripts/logs.sh --tail              # Todas las funciones
-./scripts/logs.sh create --tail       # Solo create-item
-```
-
-#### Ver solo errores
-```bash
-./scripts/logs.sh --errors            # Todos los errores
-./scripts/logs.sh --since 1h --errors # Errores de la última hora
-```
-
-#### Filtrar logs por patrón
-```bash
-./scripts/logs.sh --filter "product"
-./scripts/logs.sh list --filter "404"
-```
-
-**Ejemplos útiles para debugging:**
-
-```bash
-# Ver errores recientes
-./scripts/logs.sh --errors --since 30m
-
-# Monitorear en vivo mientras pruebas
-./scripts/logs.sh --tail
-
-# Buscar un producto específico en los logs
-./scripts/logs.sh --filter "productId"
-
-# Ver logs de una función problemática
-./scripts/logs.sh create --tail --errors
-```
-
-**Nota**: Presiona `Ctrl+C` para salir del modo tail.
-
-Consulta [scripts/README.md](scripts/README.md) para más opciones y ejemplos.
-
-### 8. Construir y Desplegar el Frontend (Opcional)
-
-El capstone incluye un frontend React para visualizar y gestionar productos.
-
-#### Construir el Frontend
-
-```bash
-./scripts/build-frontend.sh
-```
-
-Esto:
-- Instalará las dependencias del frontend
-- Construirá el bundle de producción
-- Generará archivos estáticos en `frontend/dist/`
-
-#### Desplegar Frontend a S3
-
-Después de desplegar el backend (paso 5), despliega el frontend:
-
-```bash
-./scripts/deploy-frontend.sh
-```
-
-Esto:
-- Obtendrá la URL de API de las salidas de CloudFormation
-- Reemplazará el marcador de URL de API en los archivos construidos
-- Subirá el frontend a S3
-- Mostrará la URL de CloudFront
-
-**Accede a tu frontend**: Usa la URL de CloudFront de la salida.
-
-**Nota**: El despliegue de la distribución de CloudFront puede tardar 15-20 minutos. Si obtienes un error "Not Found" inmediatamente después del despliegue, espera unos minutos e intenta de nuevo.
-
-#### Desarrollo Local del Frontend
-
-Para ejecutar el frontend localmente:
-
-1. Crea un archivo `.env` en el directorio `frontend/`:
-   ```bash
-   cd frontend
-   cp .env.example .env
-   ```
-
-2. Actualiza `.env` con tu URL de API:
-   ```
-   VITE_API_URL=https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod
-   ```
-
-3. Instala las dependencias y ejecuta:
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-4. Abre tu navegador en la URL mostrada (típicamente http://localhost:5173)
-
-Consulta [frontend/README.md](frontend/README.md) para más detalles.
-
-### 8. Limpiar Recursos
-
-**IMPORTANTE**: Para evitar cargos de AWS, elimina tu stack después de probar:
-
-```bash
-# Opción 1: Script simplificado (RECOMENDADO)
-./scripts/delete-all.sh
-
-# Opción 2: Script original
-./scripts/delete.sh
-
-# Opción 3: Directamente con SAM CLI
-sam delete --stack-name techmoda-capstone
-```
-
-**Nota**: Esto eliminará la API, funciones Lambda, tabla DynamoDB, bucket S3 y distribución CloudFront.
-
-Consulta [docs/COST_AND_CLEANUP.md](docs/COST_AND_CLEANUP.md) para estimaciones de costos y mejores prácticas de limpieza.
-
-## Documentación
-
-### Documentación Principal
-- [CAPSTONE_OVERVIEW.md](CAPSTONE_OVERVIEW.md) - Descripción del proyecto y requisitos de entrega
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Arquitectura detallada y descripciones de componentes
-- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - Instrucciones completas de prueba con ejemplos curl
-- [docs/COST_AND_CLEANUP.md](docs/COST_AND_CLEANUP.md) - Estimación de costos y procedimientos de limpieza
-
-### Especificaciones de Funciones Lambda
-- [docs/specs/LIST_ITEMS_SPEC.md](docs/specs/LIST_ITEMS_SPEC.md) - Listar todos los productos
-- [docs/specs/CREATE_ITEM_SPEC.md](docs/specs/CREATE_ITEM_SPEC.md) - Crear un nuevo producto
-- [docs/specs/GET_ITEM_SPEC.md](docs/specs/GET_ITEM_SPEC.md) - Obtener un producto por ID
-- [docs/specs/UPDATE_ITEM_SPEC.md](docs/specs/UPDATE_ITEM_SPEC.md) - Actualizar un producto existente
-- [docs/specs/DELETE_ITEM_SPEC.md](docs/specs/DELETE_ITEM_SPEC.md) - Eliminar un producto
-
-### Plantillas de Prompts (Para Claude Code)
-- [docs/prompts/01_ENVIRONMENT_SETUP.md](docs/prompts/01_ENVIRONMENT_SETUP.md) - Instalación de AWS CLI y SAM
-- [docs/prompts/02_LAMBDA_IMPLEMENTATION.md](docs/prompts/02_LAMBDA_IMPLEMENTATION.md) - Implementaciones de funciones Lambda
-- [docs/prompts/03_DEPLOYMENT.md](docs/prompts/03_DEPLOYMENT.md) - Construcción y despliegue
-- [docs/prompts/04_TESTING.md](docs/prompts/04_TESTING.md) - Pruebas de API con curl
-- [docs/prompts/05_DEBUGGING.md](docs/prompts/05_DEBUGGING.md) - Solución de problemas comunes
-- [docs/prompts/06_OPERATIONS.md](docs/prompts/06_OPERATIONS.md) - Gestión de costos y limpieza
-
-## Solución de Problemas
-
-### Problemas Comunes
-
-**Fallos de Construcción**
-- Asegúrate de que Node.js 18.x esté instalado: `node --version`
-- Verifica que package.json exista en cada directorio de función
-- Elimina la carpeta `.aws-sam` y reconstruye: `rm -rf .aws-sam && sam build`
-
-**Fallos de Despliegue**
-- Verifica las credenciales de AWS: `aws sts get-caller-identity`
-- Verifica los permisos IAM para CloudFormation, Lambda, API Gateway, DynamoDB
-- Revisa los eventos de CloudFormation en la Consola de AWS para errores específicos
-
-**Errores de API (404, 500)**
-- **Ver los logs**: `./scripts/logs.sh --errors --since 1h`
-- **Monitorear en vivo**: `./scripts/logs.sh --tail` mientras haces requests
-- Verifica que la variable de entorno `PRODUCTS_TABLE` esté configurada correctamente
-- Asegúrate de que la tabla DynamoDB exista: `aws dynamodb list-tables`
-- Revisa los rastros de X-Ray en la Consola de AWS
-
-**Errores de Permisos**
-- Verifica que las políticas IAM de la plantilla SAM coincidan con los requisitos de la función
-- Verifica que el rol de ejecución de Lambda tenga permisos de DynamoDB
-- Asegúrate de que CloudFormation tenga CAPABILITY_IAM
-
-Para guía detallada de depuración, consulta [docs/prompts/05_DEBUGGING.md](docs/prompts/05_DEBUGGING.md)
-
-## Endpoints de API
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | /products | Listar todos los productos |
-| POST | /products | Crear un nuevo producto |
-| GET | /products/{id} | Obtener un producto por ID |
-| PUT | /products/{id} | Actualizar un producto existente |
-| DELETE | /products/{id} | Eliminar un producto |
-
-## Esquema de Datos
-
-### Objeto Producto
-
-```json
-{
-  "productId": "string (UUID)",
-  "name": "string (requerido)",
-  "description": "string",
-  "price": "number (requerido)",
-  "category": "string",
-  "imageUrl": "string (URL)",
-  "createdAt": "string (marca de tiempo ISO 8601)",
-  "updatedAt": "string (marca de tiempo ISO 8601)"
-}
-```
-
-## Requisitos de Entrega
-
-Para este proyecto capstone, debes entregar:
-
-1. **URL del Repositorio GitHub** con:
-   - Plantilla SAM completa (template.yaml)
-   - Las 5 funciones Lambda implementadas
-   - README con diagrama de arquitectura e instrucciones de despliegue
-   - Ejemplos de prueba curl funcionales
-
-2. **Diagrama de Arquitectura** (en README o archivo separado)
-
-3. **Evidencia de Implementación Funcional** (capturas de pantalla opcionales o salida de curl)
-
-Consulta [CAPSTONE_OVERVIEW.md](CAPSTONE_OVERVIEW.md) para criterios completos de entrega y evaluación.
-
-## Estimación de Costos
-
-Costos esperados de AWS para este proyecto capstone: **Menos de $1 USD**
-
-Esto asume:
-- Desarrollo y pruebas durante 1-2 días
-- Aproximadamente 50-100 solicitudes de API
-- Todos los servicios dentro de los límites de AWS Free Tier
-
-**IMPORTANTE**: Elimina tu stack inmediatamente después de probar para evitar cargos continuos.
-
-Para desglose detallado de costos, consulta [docs/COST_AND_CLEANUP.md](docs/COST_AND_CLEANUP.md)
-
-## Recursos
-
-- [Documentación de AWS SAM](https://docs.aws.amazon.com/serverless-application-model/)
-- [Guía del Desarrollador de AWS Lambda](https://docs.aws.amazon.com/lambda/)
-- [Guía del Desarrollador de DynamoDB](https://docs.aws.amazon.com/dynamodb/)
-- [Documentación de API Gateway REST API](https://docs.aws.amazon.com/apigateway/)
-
-## Licencia
-
-Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo [LICENSE](LICENSE) para más detalles.
-
-## Soporte
-
-Para preguntas o problemas:
-1. Revisa la documentación en `docs/`
-2. Consulta las plantillas de prompts en `docs/prompts/`
-3. Consulta a tu instructor de bootcamp
-4. Revisa los CloudWatch Logs para detalles de errores
+La salida del stack te da `ApiUrl` (la **Lambda Function URL** del router, formato
+`https://<id>.lambda-url.us-east-1.on.aws/`) y `FrontendUrl`. Ábrelos y verás el catálogo de TechModa.
+Detalle completo y validación en **[sessions/S00-base/GUIA.md](sessions/S00-base/GUIA.md)**.
+
+> 🧩 **Dos formas de llegar al mismo resultado:**
+> - **Progresiva (recomendada, pedagógica):** desplegás `template.yaml` (solo S0) y vas pegando el
+>   `template-snippet.yaml` de cada sesión, una por hora. Así "ves crecer" la arquitectura.
+> - **Todo junto:** `sam build -t template.full.yaml && sam deploy -t template.full.yaml --stack-name techmoda-ai
+>   --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --resolve-s3 --no-confirm-changeset`
+>   despliega la base + las 8 features de IA (S1–S8) + gobernanza (S10) ya cableadas, cada una con su
+>   Function URL. Útil para una demo rápida o para revisar el resultado final.
+>   Este archivo está **validado con `sam validate --lint`**.
+>
+> ℹ️ Las Lambdas CRUD base usan **`nodejs22.x`** (la `nodejs18.x` del starter original quedó deprecada y su
+> creación está deshabilitada en AWS desde 2026-02). Las Lambdas de IA usan **`python3.12`**.
 
 ---
 
-**¡Buena suerte con tu proyecto capstone!** 🚀
+## 💸 Nota de costos + cleanup (LEER SIEMPRE)
+
+> 🔴 **Regla FinOps del capstone:** ningún recurso de IA se queda "encendido" entre sesiones más de lo necesario.
+> Bedrock, Rekognition, Comprehend, Polly, Translate **cobran por uso** (por imagen / por carácter / por token).
+> En volúmenes de práctica (decenas de llamadas) el costo es de **centavos**, pero **nunca lo dejes corriendo en bucle**.
+
+**Cada `GUIA.md` termina con:**
+1. Una **estimación de costo** de la sesión (marcada *"verificar contra la calculadora/precios oficiales de AWS"* — no inventamos cifras).
+2. El bloque de **cleanup** específico (qué borrar y cómo).
+
+Cleanup total del proyecto al terminar:
+
+```bash
+bash scripts/delete-all.sh   # vacía buckets S3 y borra el stack completo
+```
+
+Detalles: **[docs/COST_AND_CLEANUP.md](docs/COST_AND_CLEANUP.md)** y **[sessions/S11-integracion-demo-cleanup/GUIA.md](sessions/S11-integracion-demo-cleanup/GUIA.md)**.
+
+---
+
+## 🧭 Cómo navegar este repo
+
+```
+techmoda-ai-capstone/
+├── README.md                  # este archivo
+├── README-BASE-SERVERLESS.md  # docs del capstone serverless base (sin IA)
+├── template.yaml              # SAM base (S0). Cada sesión agrega su snippet aquí.
+├── samconfig.us-east-1.example
+├── functions/                 # 5 Lambdas CRUD Node.js + router/ (1 Function URL, base S0)
+├── frontend/                  # React + Vite (base S0)
+├── scripts/                   # deploy / delete / logs / status
+├── ai/
+│   └── seed/                  # productos de ejemplo con imágenes para las sesiones IA
+└── sessions/
+    ├── S00-base/GUIA.md
+    ├── S01-rekognition-labels/
+    │   ├── GUIA.md
+    │   ├── functions/enrich-labels/        # Lambda Python + boto3
+    │   └── template-snippet.yaml           # recurso + Function URL + Policies: acotadas
+    ├── S02-... S08-...                      # mismo patrón
+    └── S09 / S10 / S11                       # guía + scaffold/scripts
+```
+
+**Flujo recomendado:** seguí las sesiones **en orden** (cada una asume la anterior). Para cada sesión:
+1. Leé `GUIA.md` completa (objetivo + concepto de IA + "qué entra en el examen").
+2. Pegá el `template-snippet.yaml` en `template.yaml`.
+3. `sam build && sam deploy`.
+4. Ejecutá el comando de prueba de la guía y observá el resultado.
+5. Corré el **checklist de validación** y el **cleanup**.
+
+---
+
+## ⚖️ Marca y alcance
+
+Material educativo de **Bootcamp Institute** para el programa **AWS re/Start**, pista *AI Practitioner (AIF-C01)*.
+Caso práctico ficticio: la tienda **TechModa**. Los precios/cuotas de servicios que se citen están marcados
+para **verificar contra la documentación oficial de AWS** — no son cifras inventadas ni garantizadas.
+
+Proyecto **standalone** (no forma parte de ningún monorepo). Listo para revisión local. **No** se despliega
+automáticamente ni se publica.

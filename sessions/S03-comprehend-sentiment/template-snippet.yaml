@@ -1,0 +1,41 @@
+# ============================================================================
+# S3 · Comprehend DetectSentiment  —  pegar en template.yaml
+# ============================================================================
+# Patrón: Function URL propia (sin API Gateway) + `Policies:` de mínimo privilegio
+# (SAM crea el rol). Ver docs/IAM.md.
+# Ver docs/SANDBOX-COMPAT.md.
+# ----------------------------------------------------------------------------
+
+  AnalyzeSentimentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-AnalyzeSentiment
+      Description: S3 - Sentimiento de resenas (Amazon Comprehend)
+      CodeUri: sessions/S03-comprehend-sentiment/functions/analyze-sentiment
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: comprehend:DetectSentiment
+              Resource: "*"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+# ----------------------------------------------------------------------------
+# FUNCTION URL — Outputs:
+#   AnalyzeSentimentUrl:
+#     Value: !GetAtt AnalyzeSentimentFunctionUrl.FunctionUrl
+#
+# Invocación (el texto va en el body; este endpoint NO usa productId en el path):
+#   curl -X POST "$URL" -H 'Content-Type: application/json' \
+#        -d '{"text":"Me encantó la calidad de la tela"}'
+#
+# Permisos concedidos: comprehend:DetectSentiment (agregá DetectDominantLanguage si lo usás).
+# ----------------------------------------------------------------------------

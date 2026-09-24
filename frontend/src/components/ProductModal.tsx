@@ -5,7 +5,7 @@ import type { Product } from '../lib/types';
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (product: Omit<Product, 'product_id' | 'created_at' | 'updated_at'>) => void;
+  onSave: (product: Omit<Product, 'productId' | 'createdAt' | 'updatedAt'>) => void;
   product?: Product;
 }
 
@@ -16,7 +16,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
     price: '',
     category: 'Ropa',
     stock: '',
-    image_url: '',
+    imageUrl: '',
   });
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         price: product.price.toString(),
         category: product.category,
         stock: product.stock.toString(),
-        image_url: product.image_url,
+        imageUrl: product.imageUrl,
       });
     } else {
       setFormData({
@@ -36,7 +36,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         price: '',
         category: 'Ropa',
         stock: '',
-        image_url: '',
+        imageUrl: '',
       });
     }
   }, [product, isOpen]);
@@ -49,7 +49,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
       price: parseFloat(formData.price),
       category: formData.category,
       stock: parseInt(formData.stock),
-      image_url: formData.image_url,
+      imageUrl: formData.imageUrl,
     });
     onClose();
   };
@@ -72,12 +72,13 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 mb-1">
               Nombre del Producto
             </label>
             <input
               type="text"
               required
+              id="product-name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -85,11 +86,12 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="product-desc" className="block text-sm font-medium text-gray-700 mb-1">
               Descripción
             </label>
             <textarea
               required
+              id="product-desc"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -97,15 +99,36 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               placeholder="Describe el producto..."
             />
           </div>
+          {product?.aiDescription && (
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-2">
+                <span className="text-xl">✨</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">
+                    Descripción Generada con IA (S06 Bedrock)
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    {product.aiDescription}
+                  </p>
+                  {product.aiDescriptionModel && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      Modelo: {product.aiDescriptionModel}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 mb-1">
                 Precio ($)
               </label>
               <input
                 type="number"
                 required
                 step="0.01"
+                id="product-price"
                 min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -114,13 +137,14 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="product-stock" className="block text-sm font-medium text-gray-700 mb-1">
                 Stock
               </label>
               <input
                 type="number"
                 required
                 min="0"
+                id="product-stock"
                 value={formData.stock}
                 onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -129,11 +153,12 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 mb-1">
               Categoría
             </label>
             <select
               required
+              id="product-category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -144,14 +169,15 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="product-image" className="block text-sm font-medium text-gray-700 mb-1">
               URL de Imagen
             </label>
             <input
               type="url"
               required
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              id="product-image"
+              value={formData.imageUrl}
+              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="https://ejemplo.com/imagen.jpg"
             />

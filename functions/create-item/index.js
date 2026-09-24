@@ -45,6 +45,7 @@ exports.handler = async (event) => {
             description: body.description || '',
             price: parseFloat(body.price),
             category: body.category || '',
+            stock: Number.isFinite(parseInt(body.stock, 10)) ? parseInt(body.stock, 10) : 0,
             imageUrl: body.imageUrl || '',
             createdAt: now,
             updatedAt: now

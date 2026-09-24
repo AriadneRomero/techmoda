@@ -18,8 +18,8 @@ usage() {
     echo "  -h, --help             Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 --api-url https://abc123.execute-api.us-east-1.amazonaws.com/Prod"
-    echo "  $0 -a https://abc123.execute-api.us-east-1.amazonaws.com/Prod -d ./dist"
+    echo "  $0 --api-url https://abc123.lambda-url.us-east-1.on.aws"
+    echo "  $0 -a https://abc123.lambda-url.us-east-1.on.aws -d ./dist"
     echo ""
     exit 1
 }
@@ -55,6 +55,10 @@ if [ -z "$API_URL" ]; then
     echo ""
     usage
 fi
+
+# Normalizar: la Lambda Function URL termina en '/'. La quitamos para evitar
+# dobles slash en el frontend (${API_URL}/products).
+API_URL="${API_URL%/}"
 
 # Validate dist directory exists
 if [ ! -d "$DIST_DIR" ]; then

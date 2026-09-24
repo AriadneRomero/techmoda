@@ -1,0 +1,41 @@
+# ============================================================================
+# S4 · Amazon Translate  —  pegar en template.yaml
+# ============================================================================
+# Patrón: Function URL propia (sin API Gateway) + `Policies:` de mínimo privilegio
+# (SAM crea el rol). Ver docs/IAM.md.
+# Ver docs/SANDBOX-COMPAT.md.
+# ----------------------------------------------------------------------------
+
+  TranslateCatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-TranslateCatalog
+      Description: S4 - Catalogo multilingue ES/EN (Amazon Translate)
+      CodeUri: sessions/S04-translate-multilang/functions/translate-catalog
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: translate:TranslateText
+              Resource: "*"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+# ----------------------------------------------------------------------------
+# FUNCTION URL — Outputs:
+#   TranslateCatalogUrl:
+#     Value: !GetAtt TranslateCatalogFunctionUrl.FunctionUrl
+#
+# Invocación (id por path o body; target en el body):
+#   curl -X POST "${URL%/}/products/<PRODUCT_ID>/translate" \
+#        -H 'Content-Type: application/json' -d '{"target":"en"}'
+#
+# Permisos concedidos: translate:TranslateText (agregá comprehend:DetectDominantLanguage si lo usás).
+# ----------------------------------------------------------------------------

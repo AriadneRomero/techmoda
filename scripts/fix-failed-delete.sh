@@ -12,9 +12,9 @@ echo "=========================================="
 echo ""
 
 # Get stack name from samconfig.toml or use default
-STACK_NAME="techmoda-capstone"
+STACK_NAME="techmoda-ai"
 if [ -f "samconfig.toml" ]; then
-    STACK_NAME=$(grep 'stack_name' samconfig.toml | cut -d'"' -f2 || echo "techmoda-capstone")
+    STACK_NAME=$(grep 'stack_name' samconfig.toml | cut -d'"' -f2 || echo "techmoda-ai")
 fi
 
 echo "🔧 Intentando recuperar del error DELETE_FAILED"

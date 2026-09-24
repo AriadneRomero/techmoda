@@ -2,6 +2,11 @@
 
 Estos prompts le ayudan a solucionar problemas de ejecución de Lambda, problemas de permisos de DynamoDB y problemas comunes de serverless.
 
+> 🏖️ **Sandbox AWS re/Start:** el frente HTTP es una **Lambda Function URL** + router (no API
+> Gateway). El evento es Function URL payload v2.0 (`event.requestContext.http.method`, `event.rawPath`);
+> el router reconstruye `event.pathParameters.id`. El formato de respuesta sigue siendo
+> `{ statusCode, headers, body }`. Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Prompt 5.1: Analizar CloudWatch Logs
 
 ```
@@ -58,14 +63,14 @@ Please help:
 ## Prompt 5.4: Corregir Error de Análisis JSON
 
 ```
-My Lambda function is failing to parse JSON body from API Gateway.
+My Lambda function is failing to parse JSON body from the Lambda Function URL.
 
 Error: SyntaxError: Unexpected token in JSON at position X
 
 Function: CreateItem or UpdateItem
 
 Please help:
-1. How API Gateway passes body to Lambda (event.body is a string)
+1. How the Lambda Function URL passes body to Lambda (event.body is a string; may be base64 if isBase64Encoded)
 2. Proper way to parse JSON in Node.js (JSON.parse)
 3. How to handle invalid JSON (try/catch)
 4. Return proper 400 Bad Request response
@@ -125,19 +130,19 @@ Please help me:
 ### Flujo de Trabajo 3: Formato de Respuesta Incorrecto
 
 **Síntomas**:
-- 502 Bad Gateway desde API Gateway
+- 502 Bad Gateway desde la Lambda Function URL
 - Lambda se ejecuta exitosamente
 - CloudWatch no muestra errores
 
 **Prompt de Depuración**:
 ```
-My Lambda function completes successfully but API Gateway returns 502 Bad Gateway.
+My Lambda function completes successfully but the Lambda Function URL returns 502 Bad Gateway.
 
 CloudWatch Logs show the function returned:
 [Paste return value from logs]
 
 Please help me:
-1. Verify API Gateway response format requirements
+1. Verify Lambda Function URL response format requirements (statusCode, headers, body)
 2. Check statusCode is a number, not a string
 3. Confirm body is JSON.stringify(), not an object
 4. Verify headers object is correct
@@ -163,9 +168,9 @@ CloudWatch Logs show:
 [Paste relevant logs]
 
 Please help me:
-1. Verify event.pathParameters exists
-2. Check API Gateway route configuration
-3. Show correct way to extract path parameters
+1. Verify event.pathParameters exists (the router rebuilds it from event.rawPath)
+2. Check the router's path parsing / route configuration
+3. Show correct way to extract path parameters (from rawPath when invoked directly)
 4. Add safety checks for missing parameters
 ```
 
@@ -256,7 +261,7 @@ Please help:
 ```
 I need to view the most recent logs for my Lambda function.
 
-Function name: techmoda-capstone-[FunctionName]
+Function name: techmoda-ai-[FunctionName]
 
 Please provide:
 1. AWS CLI command to tail logs in real-time
@@ -339,16 +344,16 @@ Please show me:
 4. How to test with local DynamoDB
 ```
 
-### Validar Integración de API Gateway
+### Validar Integración de la Function URL / router
 
 **Prompt**:
 ```
-My Lambda function works locally but fails when invoked via API Gateway.
+My Lambda function works locally but fails when invoked via the Lambda Function URL (through the router).
 
 Please help:
-1. Understand how API Gateway transforms requests
-2. Verify event structure from API Gateway
-3. Test API Gateway integration
+1. Understand how the Lambda Function URL (payload v2.0) shapes the event (event.requestContext.http.method, event.rawPath, event.body)
+2. Verify the event structure the router passes to each CRUD handler (it rebuilds pathParameters.id)
+3. Test the Function URL / router integration with curl
 4. Debug integration issues
 ```
 
@@ -388,7 +393,7 @@ Please show me:
 ```
 My latest deployment broke the application and I need to rollback quickly.
 
-Stack name: techmoda-capstone
+Stack name: techmoda-ai
 
 Please help:
 1. How to rollback to previous version

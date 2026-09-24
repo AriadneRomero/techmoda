@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Vestido midi floral",
+    "description": "Vestido midi de gasa con estampado floral, manga corta.",
+    "price": 59.9,
+    "category": "Vestidos",
+    "imageUrl": "REEMPLAZAR_CON_TU_IMAGEN: s3://<stack>-frontend/assets/vestido-floral.jpg",
+    "reviews": [
+      "Me encantó la tela y el corte, llegó muy rápido. Lo volvería a comprar.",
+      "La talla es más pequeña de lo esperado y el color se ve distinto a la foto."
+    ],
+    "stock": 12
+  },
+  {
+    "name": "Chaqueta de mezclilla oversize",
+    "description": "Chaqueta denim oversize, lavado claro, bolsillos frontales.",
+    "price": 89.0,
+    "category": "Chaquetas",
+    "imageUrl": "REEMPLAZAR_CON_TU_IMAGEN: s3://<stack>-frontend/assets/chaqueta-denim.jpg",
+    "reviews": [
+      "Excelente calidad, el denim es grueso y abriga. Súper recomendada.",
+      "Buena chaqueta pero el envío tardó tres semanas en llegar."
+    ],
+    "stock": 8
+  },
+  {
+    "name": "Tenis blancos minimalistas",
+    "description": "Sneakers de cuero sintético blanco, suela de goma.",
+    "price": 74.5,
+    "category": "Calzado",
+    "imageUrl": "REEMPLAZAR_CON_TU_IMAGEN: s3://<stack>-frontend/assets/tenis-blancos.jpg",
+    "reviews": [
+      "Comodísimos y combinan con todo. Muy contento con la compra.",
+      "Se ensucian fácil pero por el precio están bien."
+    ],
+    "stock": 25
+  },
+  {
+    "name": "Bolso tote de lona",
+    "description": "Bolso tote de lona resistente, asas largas, color arena.",
+    "price": 39.99,
+    "category": "Accesorios",
+    "imageUrl": "REEMPLAZAR_CON_TU_IMAGEN: s3://<stack>-frontend/assets/bolso-tote.jpg",
+    "reviews": [
+      "Espacioso y bonito, ideal para el día a día.",
+      "La costura del asa se descosió a la semana, decepcionante."
+    ],
+    "stock": 15
+  }
+]

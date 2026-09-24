@@ -2,12 +2,16 @@
 
 ## 📋 Resumen
 
-Este documento explica el sistema de inyección runtime de configuración del frontend, que permite configurar la URL del API Gateway en tiempo de despliegue sin necesidad de reconstruir el bundle de React.
+Este documento explica el sistema de inyección runtime de configuración del frontend, que permite configurar la **Lambda Function URL** (la del router CRUD) en tiempo de despliegue sin necesidad de reconstruir el bundle de React.
+
+> 🏖️ **Sandbox AWS re/Start:** la URL base es una **Lambda Function URL**
+> (`https://<id>.lambda-url.us-east-1.on.aws/`), no API Gateway. Ver
+> [SANDBOX-COMPAT.md](SANDBOX-COMPAT.md).
 
 ## 🎯 Problema Resuelto
 
 **Antes:**
-- El placeholder `https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod` causaba `net::ERR_NAME_NOT_RESOLVED`
+- El placeholder `https://your-fn-id.lambda-url.us-east-1.on.aws/` causaba `net::ERR_NAME_NOT_RESOLVED`
 - Cambiar la URL requería rebuild del frontend (lento, costoso)
 - Método de `sed` sobre archivos JS compilados era frágil y dependiente del OS
 
@@ -81,7 +85,7 @@ Generado en producción (NO en git):
 
 ```javascript
 window.__ENV = {
-  VITE_API_URL: 'https://abc123.execute-api.us-east-1.amazonaws.com/Prod'
+  VITE_API_URL: 'https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/'
 };
 ```
 
@@ -117,7 +121,7 @@ declare global {
 const API_URL =
   window.__ENV?.VITE_API_URL ||
   import.meta.env.VITE_API_URL ||
-  'https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod';
+  'https://your-fn-id.lambda-url.us-east-1.on.aws/';
 ```
 
 ### 6. `scripts/inject-env.sh`
@@ -126,7 +130,7 @@ Script que realiza el reemplazo:
 
 ```bash
 ./scripts/inject-env.sh \
-  --api-url "https://abc123.execute-api.us-east-1.amazonaws.com/Prod" \
+  --api-url "https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/" \
   --dist-dir "frontend/dist"
 ```
 
@@ -174,7 +178,7 @@ cd ..
 
 # 2. Inyectar configuración
 ./scripts/inject-env.sh \
-  --api-url "https://abc123.execute-api.us-east-1.amazonaws.com/Prod"
+  --api-url "https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/"
 
 # 3. Verificar
 cat frontend/dist/env-config.js
@@ -196,11 +200,11 @@ console.log(window.__ENV);
 
 // 2. Verificar que no es undefined
 console.log(window.__ENV?.VITE_API_URL);
-// Output: "https://abc123.execute-api.us-east-1.amazonaws.com/Prod"
+// Output: "https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/"
 
 // 3. Revisar llamadas de red
 // Network tab > filtrar por "products"
-// Domain debería ser: abc123.execute-api.us-east-1.amazonaws.com
+// Domain debería ser: abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws
 ```
 
 ### En el Servidor
@@ -211,7 +215,7 @@ curl https://your-cloudfront-url.cloudfront.net/env-config.js
 
 # Debería mostrar:
 # window.__ENV = {
-#   VITE_API_URL: 'https://abc123.execute-api.us-east-1.amazonaws.com/Prod'
+#   VITE_API_URL: 'https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/'
 # };
 ```
 
@@ -280,7 +284,7 @@ cat frontend/dist/env-config.js
 ```bash
 # Invalidar cache
 DIST_ID=$(aws cloudformation describe-stacks \
-  --stack-name techmoda-capstone \
+  --stack-name techmoda-ai --region us-east-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontDistributionId`].OutputValue' \
   --output text)
 
@@ -300,9 +304,9 @@ aws cloudfront create-invalidation \
 
 **Sí**, por las siguientes razones:
 
-1. **URL pública:** La URL de API Gateway es pública de todas formas (necesaria para que el navegador la llame)
+1. **URL pública:** La Lambda Function URL es pública de todas formas (necesaria para que el navegador la llame; `AuthType: NONE`)
 2. **No contiene credenciales:** La URL no incluye API keys ni tokens de autenticación
-3. **CORS configurado:** API Gateway controla qué dominios pueden hacer requests
+3. **CORS configurado:** la Function URL (`FunctionUrlConfig.Cors`) controla qué dominios pueden hacer requests
 4. **Sin secretos:** `env-config.js` solo contiene la URL, no secretos
 
 ### Qué NO incluir en `window.__ENV`
@@ -348,15 +352,15 @@ script-src 'self' 'sha256-HASH_AQUI';
 ```bash
 # Development
 ./scripts/inject-env.sh \
-  --api-url "https://dev-api.execute-api.us-east-1.amazonaws.com/Prod"
+  --api-url "https://dev-fn-id.lambda-url.us-east-1.on.aws/"
 
 # Staging
 ./scripts/inject-env.sh \
-  --api-url "https://staging-api.execute-api.us-east-1.amazonaws.com/Prod"
+  --api-url "https://staging-fn-id.lambda-url.us-east-1.on.aws/"
 
 # Production
 ./scripts/inject-env.sh \
-  --api-url "https://prod-api.execute-api.us-east-1.amazonaws.com/Prod"
+  --api-url "https://prod-fn-id.lambda-url.us-east-1.on.aws/"
 ```
 
 **Ventaja:** El mismo bundle (`dist/`) puede usarse en todos los entornos, solo cambiando `env-config.js`.

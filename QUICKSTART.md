@@ -2,6 +2,15 @@
 
 Esta guía te ayudará a desplegar y probar el proyecto en 10 minutos.
 
+> 🔌 **Cómo está armado:** sin API Gateway — la API es una **Lambda Function URL** servida por un
+> router. Cada Lambda declara sus `Policies:` y **SAM le crea un rol de mínimo privilegio**, así que
+> necesitás una cuenta donde puedas **crear roles IAM** (`iam:CreateRole`). Región `us-east-1`, stack
+> `techmoda-ai`. Detalle: [`docs/SANDBOX-COMPAT.md`](docs/SANDBOX-COMPAT.md) (por qué no hay API
+> Gateway) y [`docs/IAM.md`](docs/IAM.md) (permisos).
+
+> ✅ **Antes de tocar AWS**, un comando te dice si todo está en orden:
+> `bash scripts/validate-all.sh --static`
+
 ## Opción 1: Usar el Código Pre-implementado (Recomendado para empezar)
 
 Las funciones Lambda ya están implementadas y listas para usar. Solo necesitas desplegar.
@@ -18,23 +27,16 @@ Las funciones Lambda ya están implementadas y listas para usar. Solo necesitas 
 ./scripts/deploy.sh
 ```
 
-Cuando te pregunte, usa estos valores:
-```
-Stack Name: tu-nombre-apellido
-AWS Region: us-east-1
-Confirm changes: y
-Allow SAM CLI IAM role creation: y
-Disable rollback: y
-[5x] Function has no authentication: y
-Save arguments: y
-```
+`scripts/deploy.sh` corre `sam build && sam deploy` con las capabilities correctas
+(`CAPABILITY_IAM CAPABILITY_AUTO_EXPAND`, región `us-east-1`, stack `techmoda-ai`, sin API Gateway).
+`CAPABILITY_IAM` **no es opcional**: el stack crea un rol de ejecución por Lambda.
 
 ### Paso 3: Obtener tu API URL
 
-Después del despliegue, verás:
+Después del despliegue, verás (la base es una **Lambda Function URL**, no API Gateway):
 ```
 Outputs
-ApiUrl    https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod
+ApiUrl    https://xxxxxxxxxxxxxxxxxxxxxxxxx.lambda-url.us-east-1.on.aws/
 ```
 
 **Copia esa URL** y guárdala.
@@ -42,8 +44,10 @@ ApiUrl    https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/Prod
 ### Paso 4: Probar el API
 
 ```bash
-# Configura tu API URL
-export API_URL="https://tu-api-url.execute-api.us-east-1.amazonaws.com/Prod"
+# Configura tu API URL (la Function URL del router). %/ quita el slash final.
+export API_URL=$(aws cloudformation describe-stacks --stack-name techmoda-ai \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
+API_URL="${API_URL%/}"
 
 # Crear un producto
 curl -X POST $API_URL/products \
@@ -119,7 +123,7 @@ Abre `docs/prompts/02_LAMBDA_IMPLEMENTATION.md` y copia el prompt para cada func
 Por ejemplo, para **CreateItem**:
 
 ```
-Necesito implementar una función Lambda en Node.js 18.x que cree productos en DynamoDB.
+Necesito implementar una función Lambda en Node.js 22.x que cree productos en DynamoDB.
 
 Requisitos:
 - Tabla DynamoDB: usar variable de entorno PRODUCTS_TABLE
@@ -138,6 +142,7 @@ Campos del producto:
   "description": "string",
   "price": "number (requerido)",
   "category": "string",
+  "stock": "number (default 0)",
   "imageUrl": "string",
   "createdAt": "ISO timestamp",
   "updatedAt": "ISO timestamp"
@@ -165,7 +170,20 @@ aws configure
 
 O si usas Codespaces, ver [AWS_CREDENTIALS_SETUP.md](AWS_CREDENTIALS_SETUP.md).
 
-### Error: "AccessDenied" al desplegar
+### Error: `is not authorized to perform: iam:CreateRole`
+
+El stack crea un rol de mínimo privilegio por Lambda, así que tu identidad de deploy necesita
+`iam:CreateRole`. Si la cuenta no lo permite (caso típico: el `LabRole` del sandbox AWS re/Start),
+el deploy falla y CloudFormation revierte el stack entero. No es un error del template: es la cuenta.
+Contexto en [`docs/SANDBOX-COMPAT.md`](docs/SANDBOX-COMPAT.md) §2–§3.
+
+### Error: `AccessDeniedException` en las sesiones de Bedrock (S06–S09)
+
+Primer sospechoso: **Bedrock → Model access** no habilitado en la consola, en la región del deploy
+(es un setting por región). El permiso IAM concedido **no alcanza** si el modelo no está habilitado.
+Ver [`docs/IAM.md`](docs/IAM.md).
+
+### Otros "AccessDenied" al desplegar
 
 **Solución**: Tu usuario IAM necesita permisos. Contacta al instructor.
 
@@ -198,7 +216,8 @@ O si usas Codespaces, ver [AWS_CREDENTIALS_SETUP.md](AWS_CREDENTIALS_SETUP.md).
 
 ```
 techmoda-serverless-capstone-starter/
-├── functions/                   # 5 funciones Lambda (implementadas)
+├── functions/                   # Lambdas CRUD (implementadas) + router
+│   ├── router/                 # router de la Function URL (despliega como 1 Lambda)
 │   ├── list-items/             # GET /products
 │   ├── create-item/            # POST /products
 │   ├── get-item/               # GET /products/{id}
@@ -225,8 +244,15 @@ techmoda-serverless-capstone-starter/
 
 - **AWS SAM Docs**: https://docs.aws.amazon.com/serverless-application-model/
 - **DynamoDB Developer Guide**: https://docs.aws.amazon.com/dynamodb/
-- **API Gateway REST API**: https://docs.aws.amazon.com/apigateway/
+- **Lambda Function URLs**: https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html
 
 ---
 
 **¡Éxito con tu proyecto capstone!** 🚀
+
+## Continuidad entre sesiones
+
+Si trabajás en un entorno efímero (un sandbox que se recicla, o después de un cleanup), el stack y los
+datos no sobreviven. **Paso 0 de cada sesión:** `bash scripts/bootstrap.sh` — reconstruye el entorno en
+~2-3 min y es idempotente (si ya está desplegado, termina en segundos). Plan día por día y modelo de
+continuidad: ver [`SESSION-PLAN.md`](SESSION-PLAN.md).

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { api } from './lib/api';
@@ -93,7 +93,7 @@ describe('App Component', () => {
     });
 
     it('should hide "Agregar Nuevo Producto" button in customer mode', async () => {
-      const user = userEvent.setup();
+      userEvent.setup();
       render(<App />);
 
       await waitFor(() => {
@@ -264,7 +264,7 @@ describe('App Component', () => {
 
     it('should create new product successfully', async () => {
       const user = userEvent.setup();
-      const newProduct = { ...mockProducts[0], product_id: 'new-123', name: 'Producto Nuevo' };
+      const newProduct = { ...mockProducts[0], productId: 'new-123', name: 'Producto Nuevo' };
       vi.mocked(api.createProduct).mockResolvedValue(newProduct);
 
       render(<App />);
@@ -286,7 +286,7 @@ describe('App Component', () => {
       await user.type(screen.getByLabelText(/descripción/i), mockProductInput.description);
       await user.type(screen.getByLabelText(/precio/i), mockProductInput.price.toString());
       await user.type(screen.getByLabelText(/stock/i), mockProductInput.stock.toString());
-      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.image_url);
+      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.imageUrl);
 
       // Submit
       const createButton = screen.getByRole('button', { name: /crear/i });
@@ -326,7 +326,7 @@ describe('App Component', () => {
       await user.type(screen.getByLabelText(/descripción/i), mockProductInput.description);
       await user.type(screen.getByLabelText(/precio/i), mockProductInput.price.toString());
       await user.type(screen.getByLabelText(/stock/i), mockProductInput.stock.toString());
-      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.image_url);
+      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.imageUrl);
 
       // Submit
       const createButton = screen.getByRole('button', { name: /crear/i });

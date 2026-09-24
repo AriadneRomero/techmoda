@@ -13,7 +13,7 @@ export function ProductCard({ product, onEdit, onDelete, isAdmin }: ProductCardP
     <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
       <div className="aspect-square overflow-hidden bg-gray-100">
         <img
-          src={product.image_url}
+          src={product.imageUrl}
           alt={product.name}
           className="w-full h-full object-cover"
         />
@@ -30,6 +30,14 @@ export function ProductCard({ product, onEdit, onDelete, isAdmin }: ProductCardP
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
           {product.description}
         </p>
+        {product.aiDescription && (
+          <div className="mt-2 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200 mb-4">
+            <p className="text-xs font-semibold text-purple-700 mb-1">✨ Descripción con IA</p>
+            <p className="text-sm text-gray-700 line-clamp-2">
+              {product.aiDescription}
+            </p>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <span className="text-2xl font-bold text-gray-900">
             ${product.price.toFixed(2)}
@@ -48,7 +56,7 @@ export function ProductCard({ product, onEdit, onDelete, isAdmin }: ProductCardP
               Editar
             </button>
             <button
-              onClick={() => onDelete?.(product.product_id)}
+              onClick={() => onDelete?.(product.productId)}
               className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
             >
               Eliminar

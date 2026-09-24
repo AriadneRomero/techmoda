@@ -2,12 +2,16 @@
 
 Estos prompts le ayudan a monitorear traces de X-Ray, estimar costos de AWS, limpiar recursos y solucionar problemas de fallos de eliminación.
 
+> 🏖️ **Sandbox AWS re/Start:** el stack se llama **`techmoda-ai`** y el frente HTTP es **Lambda
+> Function URLs** (no API Gateway). El cleanup elimina las Function URLs junto con las Lambdas. Ver
+> [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Prompt 6.1: Ver Traces de X-Ray
 
 ```
 I want to analyze X-Ray traces for my API to understand request flow.
 
-Stack: techmoda-capstone
+Stack: techmoda-ai
 
 Please provide:
 1. Where to find X-Ray traces in AWS Console
@@ -23,7 +27,7 @@ I need to estimate costs for my TechModa capstone project.
 
 Architecture:
 - 5 Lambda functions (Node.js 18.x, 256 MB memory, avg 200ms execution)
-- API Gateway REST API
+- Lambda Function URLs (router CRUD + per-AI-function; no API Gateway)
 - DynamoDB table (PAY_PER_REQUEST billing)
 - CloudWatch Logs (7 days retention)
 - X-Ray tracing
@@ -46,12 +50,12 @@ Please provide:
 ```
 I have finished testing my TechModa capstone and need to delete all resources to avoid charges.
 
-Stack name: techmoda-capstone
+Stack name: techmoda-ai
 
 Please provide:
 1. Command to delete SAM stack (sam delete)
 2. Confirmation prompts I'll see
-3. What resources get deleted (Lambda, API Gateway, DynamoDB, IAM roles)
+3. What resources get deleted (Lambda + Function URLs, DynamoDB, and the per-function IAM execution roles the stack created)
 4. How to verify deletion completed
 5. How to check AWS CloudFormation console for DELETE_COMPLETE status
 6. Estimated time for full deletion
@@ -84,13 +88,13 @@ Please help:
 ```
 I want to use X-Ray to analyze my API's performance and identify bottlenecks.
 
-Stack: techmoda-capstone
+Stack: techmoda-ai
 Endpoint tested: [POST/GET/PUT/DELETE /products]
 
 Please show me:
 1. How to access X-Ray console
 2. How to filter traces by time range
-3. How to interpret the service map (API Gateway → Lambda → DynamoDB)
+3. How to interpret the service map (Lambda Function URL → Lambda → DynamoDB)
 4. What "cold start" looks like in traces
 5. How to identify slow DynamoDB operations
 6. What good vs bad performance looks like
@@ -103,7 +107,7 @@ Please show me:
 I'm looking at the X-Ray service map but don't understand what I'm seeing.
 
 Please explain:
-1. What each node represents (API Gateway, Lambda, DynamoDB)
+1. What each node represents (Lambda Function URL, Lambda, DynamoDB)
 2. What the connections/edges mean
 3. What the colors indicate (green=healthy, red=errors, orange=warnings)
 4. How to click into individual services for details
@@ -140,7 +144,7 @@ Usage data:
 - Lambda invocations: [count]
 - DynamoDB read operations: [count]
 - DynamoDB write operations: [count]
-- API Gateway requests: [count]
+- Lambda Function URL requests: [count] (billed as Lambda invocations, no extra API Gateway cost)
 - Data transfer: [estimated MB]
 - CloudWatch Logs: [estimated MB]
 - X-Ray traces: [count]
@@ -161,7 +165,7 @@ I want to check my actual AWS costs for the capstone project.
 Please show me:
 1. How to access AWS Billing Dashboard
 2. Where to see Month-to-Date costs
-3. How to filter by service (Lambda, DynamoDB, API Gateway)
+3. How to filter by service (Lambda, DynamoDB)
 4. How to set up billing alerts
 5. How to track Free Tier usage
 ```
@@ -193,7 +197,7 @@ Please suggest:
 ```
 I need to delete ALL resources created for my TechModa capstone.
 
-Stack name: techmoda-capstone
+Stack name: techmoda-ai
 Region: us-east-1
 
 Please provide step-by-step:
@@ -214,10 +218,10 @@ I ran sam delete and it says it completed, but I want to verify everything is go
 Please provide commands to check:
 1. CloudFormation stack status
 2. Lambda functions (should be none)
-3. DynamoDB tables (should be none)
-4. API Gateway APIs (should be none)
+3. Lambda Function URLs (deleted with their functions)
+4. DynamoDB tables (should be none)
 5. CloudWatch Log Groups (may remain temporarily)
-6. IAM roles (should be deleted)
+6. Note: each Lambda's execution role was created by the stack, so it is deleted with the stack
 ```
 
 ### Problemas de Eliminación Parcial
@@ -228,7 +232,7 @@ Some resources were deleted but others remain.
 
 Deleted:
 - Lambda functions
-- API Gateway
+- Lambda Function URLs
 
 Still exist:
 - DynamoDB table
@@ -250,7 +254,7 @@ Please help:
 ```
 My stack deletion failed and is now in DELETE_FAILED status.
 
-Stack name: techmoda-capstone
+Stack name: techmoda-ai
 
 CloudFormation Events show:
 [Paste error from Events tab]
@@ -463,7 +467,7 @@ Please help me:
 1. Export DynamoDB table data
 2. Save CloudWatch Logs
 3. Capture X-Ray traces
-4. Screenshot API Gateway configuration
+4. Screenshot the Lambda Function URL configuration (and stack outputs)
 5. Document architecture for portfolio
 6. Then safely delete everything
 ```

@@ -81,7 +81,7 @@ describe('ProductModal Component', () => {
       expect(screen.getByLabelText(/precio/i)).toHaveValue(mockProduct.price);
       expect(screen.getByLabelText(/stock/i)).toHaveValue(mockProduct.stock);
       expect(screen.getByLabelText(/categoría/i)).toHaveValue(mockProduct.category);
-      expect(screen.getByLabelText(/url de imagen/i)).toHaveValue(mockProduct.image_url);
+      expect(screen.getByLabelText(/url de imagen/i)).toHaveValue(mockProduct.imageUrl);
     });
 
     it('should reset form when modal is reopened', async () => {
@@ -179,7 +179,7 @@ describe('ProductModal Component', () => {
       await user.type(screen.getByLabelText(/descripción/i), mockProductInput.description);
       await user.type(screen.getByLabelText(/precio/i), mockProductInput.price.toString());
       await user.type(screen.getByLabelText(/stock/i), mockProductInput.stock.toString());
-      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.image_url);
+      await user.type(screen.getByLabelText(/url de imagen/i), mockProductInput.imageUrl);
 
       // Submit form
       const submitButton = screen.getByRole('button', { name: /crear/i });
@@ -211,7 +211,7 @@ describe('ProductModal Component', () => {
         price: 99.99,
         stock: 50,
         category: 'Ropa',
-        image_url: 'https://example.com/test.jpg',
+        imageUrl: 'https://example.com/test.jpg',
       });
     });
 
@@ -235,14 +235,14 @@ describe('ProductModal Component', () => {
         price: 59.99,
         stock: mockProduct.stock,
         category: mockProduct.category,
-        image_url: mockProduct.image_url,
+        imageUrl: mockProduct.imageUrl,
       });
     });
   });
 
   describe('Form Validation', () => {
     it('should require name field', async () => {
-      const user = userEvent.setup();
+      userEvent.setup();
       const onSave = vi.fn();
 
       render(<ProductModal {...defaultProps} onSave={onSave} />);

@@ -2,7 +2,13 @@
 
 ## Descripción del Proyecto
 
-El TechModa Serverless Capstone es un proyecto práctico donde construirás una API REST lista para producción para un catálogo de productos de e-commerce de moda utilizando tecnologías serverless de AWS. Este proyecto sirve como la culminación de tu bootcamp de Arquitectura Serverless de AWS, demostrando tu capacidad para diseñar, implementar, desplegar y operar aplicaciones serverless.
+El TechModa Serverless Capstone es un proyecto práctico donde construirás una API lista para producción para un catálogo de productos de e-commerce de moda utilizando tecnologías serverless de AWS. Este proyecto sirve como la culminación de tu bootcamp de Arquitectura Serverless de AWS, demostrando tu capacidad para diseñar, implementar, desplegar y operar aplicaciones serverless.
+
+> 🔌 **Lo que realmente se despliega:** el CRUD se expone con **una Lambda Function URL** servida por
+> un **router**, no con API Gateway. Y cada Lambda declara sus `Policies:` para que **SAM le cree un rol
+> de mínimo privilegio**. Donde este documento menciona **API Gateway**, es material didáctico del
+> patrón clásico — la realidad desplegada usa Function URLs. Ver
+> [docs/SANDBOX-COMPAT.md](docs/SANDBOX-COMPAT.md) y [docs/IAM.md](docs/IAM.md).
 
 ### Contexto de Negocio
 
@@ -25,7 +31,7 @@ Esta arquitectura debe ser:
 Al completar este proyecto capstone, demostrarás dominio de:
 
 1. **Diseño de Arquitectura Serverless**
-   - Diseñar sistemas orientados a eventos usando Lambda, API Gateway y DynamoDB
+   - Diseñar sistemas orientados a eventos usando Lambda, Lambda Function URLs y DynamoDB
    - Entender cuándo usar arquitecturas serverless vs. tradicionales
    - Aplicar los principios del AWS Well-Architected Framework
 
@@ -37,7 +43,7 @@ Al completar este proyecto capstone, demostrarás dominio de:
 
 3. **Infraestructura como Código (IaC)**
    - Escribir plantillas de AWS SAM para aplicaciones serverless
-   - Definir recursos de forma declarativa (Lambda, API Gateway, DynamoDB)
+   - Definir recursos de forma declarativa (Lambda, Function URLs, DynamoDB)
    - Gestionar roles y permisos IAM con principio de mínimo privilegio
    - Versionar la infraestructura junto con el código de la aplicación
 
@@ -51,7 +57,7 @@ Al completar este proyecto capstone, demostrarás dominio de:
    - Analizar CloudWatch Logs para errores de ejecución de Lambda
    - Interpretar rastros de X-Ray para obtener información sobre el rendimiento
    - Diagnosticar problemas de permisos (roles IAM, acceso a DynamoDB)
-   - Solucionar problemas de configuración de API Gateway
+   - Solucionar problemas de configuración de la Function URL / router
 
 6. **Gestión de Costos de AWS**
    - Estimar costos para cargas de trabajo serverless
@@ -84,11 +90,11 @@ Al completar este proyecto capstone, demostrarás dominio de:
 | Servicio | Propósito | Configuración |
 |---------|---------|---------------|
 | **AWS Lambda** | Capa de cómputo para lógica de negocio | Runtime Node.js 18.x, 1024 MB memoria, 30s timeout |
-| **API Gateway** | Frontend de API REST | Endpoint regional, CORS habilitado, stage Prod |
+| **Lambda Function URL** | Frontend HTTP (en vez de API Gateway) | `AuthType: NONE`, CORS abierto; una URL → router CRUD; cada función IA con su propia URL |
 | **DynamoDB** | Base de datos NoSQL | Facturación PAY_PER_REQUEST, diseño de tabla única |
 | **CloudWatch** | Registro centralizado | Grupos de logs automáticos para cada función Lambda |
-| **X-Ray** | Rastreo distribuido | Habilitado para API Gateway y todas las funciones Lambda |
-| **IAM** | Seguridad y permisos | Roles de mínimo privilegio administrados por SAM |
+| **X-Ray** | Rastreo distribuido | Habilitado para todas las funciones Lambda |
+| **IAM** | Seguridad y permisos | **Un rol de mínimo privilegio por Lambda**, creado por SAM a partir de sus `Policies:` (ver `docs/IAM.md`) |
 | **CloudFormation** | Despliegue de infraestructura | Via abstracción de AWS SAM |
 
 ### Herramientas de Desarrollo
@@ -114,7 +120,7 @@ Internet
    │
    ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  API Gateway (REST API)                                       │
+│  Lambda Function URL + router (functions/router/index.js)     │
 │  - /products (GET, POST)                                      │
 │  - /products/{id} (GET, PUT, DELETE)                          │
 └───────────────┬──────────────────────────────────────────────┘
@@ -249,7 +255,7 @@ Este proyecto capstone debería costar **menos de $1 USD** para todo el período
 |---------|---------------|-------|
 | DynamoDB | $0.00 - $0.10 | PAY_PER_REQUEST, operaciones mínimas, Free Tier |
 | Lambda | $0.00 - $0.20 | Primeras 1M solicitudes gratis, ~100 invocaciones |
-| API Gateway | $0.00 - $0.50 | Primeras 1M solicitudes $3.50/millón, ~50 solicitudes |
+| Lambda Function URLs | $0.00 | Sin costo adicional sobre la invocación de Lambda (no hay API Gateway) |
 | CloudWatch Logs | $0.00 - $0.10 | Ingesta mínima de logs, Free Tier |
 | X-Ray | $0.00 - $0.10 | Primeros 100k rastros gratis |
 
@@ -311,15 +317,15 @@ Tu capstone es exitoso cuando:
 4. **Guía de Depuración** - `docs/prompts/05_DEBUGGING.md` para solución de problemas
 5. **Soporte del Instructor** - Haz preguntas durante la Sesión 10
 6. **CloudWatch Logs** - Primer lugar para buscar errores
-7. **Documentación de AWS** - Guías oficiales para Lambda, DynamoDB, API Gateway
+7. **Documentación de AWS** - Guías oficiales para Lambda, DynamoDB, Lambda Function URLs
 
 ### Desafíos Comunes
 
 | Desafío | Solución |
 |-----------|----------|
 | Errores de función Lambda | Verifica CloudWatch Logs para trazas de pila |
-| Permiso denegado de DynamoDB | Verifica políticas IAM de plantilla SAM |
-| Errores 404 de API Gateway | Confirma que las rutas de endpoint coinciden con la plantilla |
+| Permiso denegado de DynamoDB | Verifica que la función tenga su `DynamoDBCrudPolicy`/`ReadPolicy` sobre la tabla correcta, y que **no** haya un `Role:` al lado (anula las `Policies` en silencio) |
+| Errores 404 en la Function URL | Confirma que las rutas en el router coinciden con la plantilla |
 | Fallos de despliegue | Revisa eventos de CloudFormation en consola |
 | Errores de timeout | Aumenta el timeout de Lambda u optimiza el código |
 

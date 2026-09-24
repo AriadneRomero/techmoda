@@ -20,7 +20,7 @@ export function useProducts() {
     }
   };
 
-  const createProduct = async (product: Omit<Product, 'product_id' | 'created_at' | 'updated_at'>) => {
+  const createProduct = async (product: Omit<Product, 'productId' | 'createdAt' | 'updatedAt'>) => {
     try {
       const newProduct = await api.createProduct(product);
       setProducts((prev) => [newProduct, ...prev]);
@@ -33,11 +33,11 @@ export function useProducts() {
     }
   };
 
-  const updateProduct = async (productId: string, updates: Partial<Omit<Product, 'product_id' | 'created_at' | 'updated_at'>>) => {
+  const updateProduct = async (productId: string, updates: Partial<Omit<Product, 'productId' | 'createdAt' | 'updatedAt'>>) => {
     try {
       const updatedProduct = await api.updateProduct(productId, updates);
       setProducts((prev) =>
-        prev.map((p) => (p.product_id === productId ? updatedProduct : p))
+        prev.map((p) => (p.productId === productId ? updatedProduct : p))
       );
       return { success: true };
     } catch (err) {
@@ -51,7 +51,7 @@ export function useProducts() {
   const deleteProduct = async (productId: string) => {
     try {
       await api.deleteProduct(productId);
-      setProducts((prev) => prev.filter((p) => p.product_id !== productId));
+      setProducts((prev) => prev.filter((p) => p.productId !== productId));
       return { success: true };
     } catch (err) {
       return {

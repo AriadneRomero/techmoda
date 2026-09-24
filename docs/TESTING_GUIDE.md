@@ -2,17 +2,22 @@
 
 ## Descripción General
 
-Esta guía proporciona instrucciones completas para probar manualmente tu API de Catálogo de Productos TechModa usando comandos curl. Aprenderás cómo obtener tu URL de API Gateway, ejecutar pruebas para las 5 operaciones CRUD e interpretar las respuestas.
+Esta guía proporciona instrucciones completas para probar manualmente tu API de Catálogo de Productos TechModa usando comandos curl. Aprenderás cómo obtener tu **Lambda Function URL**, ejecutar pruebas para las 5 operaciones CRUD e interpretar las respuestas.
+
+> 🏖️ **Sandbox AWS re/Start:** la URL base es una **Lambda Function URL** (no API Gateway), servida
+> por un **router**. Formato `https://<id>.lambda-url.us-east-1.on.aws/` — termina en `/` y **no** lleva
+> `/Prod`. Usa `${API_URL%/}` para quitar la barra final al concatenar rutas. Ver
+> [SANDBOX-COMPAT.md](SANDBOX-COMPAT.md).
 
 ## Prerequisitos
 
-- Stack SAM desplegado (ejecuta `sam build && sam deploy --guided` primero)
+- Stack SAM desplegado (ejecuta `sam build && sam deploy` primero)
 - curl instalado (pre-instalado en macOS/Linux, disponible via Git Bash en Windows)
 - Acceso a terminal o línea de comandos
 
-## Paso 1: Obtener tu URL de API Gateway
+## Paso 1: Obtener tu Lambda Function URL (router)
 
-Después de desplegar tu aplicación SAM, necesitas la URL del endpoint de API Gateway.
+Después de desplegar tu aplicación SAM, necesitas la Function URL del router (output `ApiUrl`).
 
 ### Método 1: Desde la Salida del Despliegue
 
@@ -23,9 +28,9 @@ CloudFormation outputs from deployed stack
 -------------------------------------------------
 Outputs
 -------------------------------------------------
-Key                 TechModaApi
-Description         API Gateway endpoint URL
-Value               https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod
+Key                 ApiUrl
+Description         Lambda Function URL (router CRUD)
+Value               https://abc123xyzabc123xyzabc123xyz0000.lambda-url.us-east-1.on.aws/
 -------------------------------------------------
 ```
 
@@ -35,35 +40,35 @@ Copia la URL del campo `Value`.
 
 ```bash
 aws cloudformation describe-stacks \
-  --stack-name techmoda-capstone \
-  --query "Stacks[0].Outputs[?OutputKey=='TechModaApi'].OutputValue" \
+  --stack-name techmoda-ai \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
   --output text
 ```
 
 ### Método 3: Consola de AWS
 
 1. Ve a la consola de AWS CloudFormation
-2. Selecciona tu stack (ej., `techmoda-capstone`)
+2. Selecciona tu stack (ej., `techmoda-ai`)
 3. Haz clic en la pestaña "Outputs"
-4. Copia el valor de `TechModaApi`
+4. Copia el valor de `ApiUrl`
 
 ### Configurar Variable de Entorno (Recomendado)
 
-Para facilitar las pruebas, guarda tu URL de API como una variable de entorno:
+Para facilitar las pruebas, guarda tu Function URL como una variable de entorno (sin la barra final):
 
 **macOS/Linux**:
 ```bash
-export API_URL="https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod"
+export API_URL="https://abc123xyzabc123xyzabc123xyz0000.lambda-url.us-east-1.on.aws"
 ```
 
 **Windows (PowerShell)**:
 ```powershell
-$env:API_URL = "https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod"
+$env:API_URL = "https://abc123xyzabc123xyzabc123xyz0000.lambda-url.us-east-1.on.aws"
 ```
 
 **Windows (CMD)**:
 ```cmd
-set API_URL=https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod
+set API_URL=https://abc123xyzabc123xyzabc123xyz0000.lambda-url.us-east-1.on.aws
 ```
 
 Ahora puedes usar `$API_URL` (o `%API_URL%` en Windows CMD) en los comandos curl.
@@ -152,9 +157,9 @@ echo $PRODUCT_ID
 | Error | Causa Probable | Solución |
 |-------|--------------|----------|
 | 400 Bad Request | Falta `name` o `price` | Agregar campos requeridos al cuerpo JSON |
-| 403 Forbidden | Problema de permisos IAM | Verificar políticas de DynamoDB en template SAM |
+| 403 Forbidden | Problema de permisos | Verificar las `Policies:` de la función (y que no tenga `Role:`, que las anula en silencio) — ver `docs/IAM.md` |
 | 500 Internal Server Error | Error de ejecución Lambda | Revisar CloudWatch Logs |
-| Connection refused | URL de API incorrecta | Verificar URL de API Gateway |
+| Connection refused | URL de API incorrecta | Verificar la Lambda Function URL (.lambda-url.<region>.on.aws/) |
 
 ## Prueba 2: Listar Productos (GET)
 
@@ -408,8 +413,8 @@ Aquí hay un script bash completo para probar todos los endpoints en secuencia:
 ```bash
 #!/bin/bash
 
-# Configuración
-API_URL="https://your-api-id.execute-api.us-east-1.amazonaws.com/Prod"
+# Configuración — Lambda Function URL del router (sin barra final)
+API_URL="https://your-fn-id.lambda-url.us-east-1.on.aws"
 
 echo "=== TechModa API Test Suite ==="
 echo ""
@@ -535,12 +540,12 @@ Después de ejecutar las pruebas, revisa los logs de ejecución de Lambda para d
 
 **Listar streams de logs recientes**:
 ```bash
-aws logs tail /aws/lambda/techmoda-capstone-CreateItem --follow
+aws logs tail /aws/lambda/techmoda-ai-CreateItem --follow
 ```
 
 **Obtener últimos 50 eventos de log**:
 ```bash
-aws logs tail /aws/lambda/techmoda-capstone-CreateItem --since 5m
+aws logs tail /aws/lambda/techmoda-ai-CreateItem --since 5m
 ```
 
 ### Ver Logs (Consola de AWS)
@@ -571,7 +576,7 @@ REPORT RequestId: abc-123-def  Duration: 150.00 ms  Billed Duration: 150 ms  Mem
 1. Ve a X-Ray → Traces
 2. Filtra por rango de tiempo (últimos 5 minutos)
 3. Haz clic en una traza para ver detalles:
-   - Segmento API Gateway (enrutamiento de solicitudes)
+   - Segmento de la Lambda Function URL / router (enrutamiento de solicitudes)
    - Segmento Lambda (ejecución de función)
    - Segmento DynamoDB (operaciones de base de datos)
 4. Revisa el Service Map para vista general visual
@@ -594,16 +599,18 @@ REPORT RequestId: abc-123-def  Duration: 150.00 ms  Billed Duration: 150 ms  Mem
 
 ### Problema: "Connection refused" o "Could not resolve host"
 
-**Solución**: Verificar URL de API Gateway
-- Revisar Outputs de CloudFormation
-- Asegurar que la URL incluya `https://` y stage `/Prod`
-- Sin barra final en la URL base
+**Solución**: Verificar la Lambda Function URL
+- Revisar el output `ApiUrl` de CloudFormation
+- Asegurar que la URL incluya `https://` y termine en `.lambda-url.<region>.on.aws/` (sin `/Prod`)
+- Quitar la barra final con `${API_URL%/}` antes de concatenar rutas
 
 ### Problema: 403 Forbidden
 
-**Solución**: Problema de permisos IAM
-- Revisar políticas de DynamoDB en template SAM
-- Verificar que el rol de ejecución de Lambda tenga los permisos necesarios
+**Solución**: Problema de permisos
+- Verificar que la función declare `Policies:` y **no** un `Role:` (son excluyentes en SAM: con `Role`,
+  tus `Policies` se ignoran **en silencio**)
+- Confirmar que la política apunte a la tabla correcta (`DynamoDBCrudPolicy` vs `DynamoDBReadPolicy`)
+- Ver el rol que SAM generó: `aws lambda get-function-configuration --function-name <fn> --query Role`
 - Re-desplegar con `sam build && sam deploy`
 
 ### Problema: 500 Internal Server Error
@@ -616,10 +623,10 @@ REPORT RequestId: abc-123-def  Duration: 150.00 ms  Billed Duration: 150 ms  Mem
 
 ### Problema: 404 Not Found (razón incorrecta)
 
-**Solución**: Problema de enrutamiento de API Gateway
-- Verificar que la ruta del endpoint coincida con template.yaml
-- Revisar método HTTP (GET vs POST vs PUT vs DELETE)
-- Asegurar que existan las rutas `/products` y `/products/{id}`
+**Solución**: Problema de enrutamiento del router (Function URL)
+- Verificar que el router (`functions/router/index.js`) parsee correctamente `event.rawPath`
+- Revisar método HTTP (GET vs POST vs PUT vs DELETE) en `event.requestContext.http.method`
+- Asegurar que el router maneje las rutas `/products` y `/products/{id}`
 
 ### Problema: Respuesta vacía o timeout
 

@@ -1,5 +1,9 @@
 # Especificación de Función Lambda: UpdateItem
 
+> 🏖️ **Sandbox AWS re/Start:** se invoca vía la **Lambda Function URL del router** (no API Gateway).
+> El evento es **Function URL payload v2.0**; el **router** reconstruye `event.pathParameters.id` desde
+> `event.rawPath`. Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Propósito
 
 Actualizar un producto existente en el catálogo de moda TechModa usando la operación UpdateItem de DynamoDB con actualizaciones parciales y gestión automática de timestamps.
@@ -10,7 +14,7 @@ Actualizar un producto existente en el catálogo de moda TechModa usando la oper
 
 **Ruta**: `/products/{id}`
 
-**Trigger**: Evento de API Gateway REST API con parámetro de ruta y cuerpo JSON
+**Trigger**: Lambda Function URL (vía router) con parámetro de ruta y cuerpo JSON — payload v2.0
 
 ## Esquema de Entrada
 
@@ -53,20 +57,20 @@ Content-Type: application/json
 }
 ```
 
-### Estructura de Evento API Gateway
+### Estructura de Evento (Lambda Function URL, payload v2.0)
 ```javascript
 {
-  "httpMethod": "PUT",
-  "path": "/products/123e4567-e89b-12d3-a456-426614174000",
-  "pathParameters": {
-    "id": "123e4567-e89b-12d3-a456-426614174000"
-  },
+  "rawPath": "/products/123e4567-e89b-12d3-a456-426614174000",
+  "requestContext": { "http": { "method": "PUT" } },
   "headers": {
-    "Content-Type": "application/json"
+    "content-type": "application/json"
   },
-  "body": "{\"price\":69.99,\"description\":\"Updated description\"}"
+  "body": "{\"price\":69.99,\"description\":\"Updated description\"}",
+  "isBase64Encoded": false
 }
 ```
+*(El router reconstruye `event.pathParameters.id` desde `rawPath` y decodifica el body si
+`isBase64Encoded` es `true`, antes de invocar este handler.)*
 
 ## Esquema de Salida
 
@@ -225,7 +229,7 @@ Content-Type: application/json
    - Extraer Attributes de la respuesta
 
 8. Manejar caso exitoso
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 200
      * headers: Content-Type y CORS
      * body: JSON.stringify(Attributes)
@@ -239,10 +243,12 @@ Content-Type: application/json
 
 ## Comando Curl de Prueba
 
+> `API_URL` = Function URL del router (output `ApiUrl`). `${API_URL%/}` quita la barra final.
+
 ### Actualizar Precio y Descripción
 
 ```bash
-curl -X PUT $API_URL/products/{PRODUCT_ID} \
+curl -X PUT "${API_URL%/}/products/{PRODUCT_ID}" \
   -H "Content-Type: application/json" \
   -d '{
     "price": 69.99,
@@ -253,7 +259,7 @@ curl -X PUT $API_URL/products/{PRODUCT_ID} \
 ### Actualizar Múltiples Campos
 
 ```bash
-curl -X PUT $API_URL/products/{PRODUCT_ID} \
+curl -X PUT "${API_URL%/}/products/{PRODUCT_ID}" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Vintage Denim Jacket",
@@ -266,7 +272,7 @@ curl -X PUT $API_URL/products/{PRODUCT_ID} \
 ### Actualizar Un Solo Campo
 
 ```bash
-curl -X PUT $API_URL/products/{PRODUCT_ID} \
+curl -X PUT "${API_URL%/}/products/{PRODUCT_ID}" \
   -H "Content-Type: application/json" \
   -d '{
     "price": 59.99
@@ -276,7 +282,7 @@ curl -X PUT $API_URL/products/{PRODUCT_ID} \
 ### Probar 404 Not Found
 
 ```bash
-curl -X PUT $API_URL/products/nonexistent-id \
+curl -X PUT "${API_URL%/}/products/nonexistent-id" \
   -H "Content-Type: application/json" \
   -d '{"price": 99.99}'
 ```
@@ -287,7 +293,7 @@ curl -X PUT $API_URL/products/nonexistent-id \
 
 ```bash
 # 1. Crear producto
-RESPONSE=$(curl -s -X POST $API_URL/products \
+RESPONSE=$(curl -s -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Product", "price": 100.00}')
 
@@ -296,12 +302,12 @@ PRODUCT_ID=$(echo $RESPONSE | jq -r '.productId')
 echo "Created product: $PRODUCT_ID"
 
 # 3. Actualizar producto
-curl -X PUT $API_URL/products/$PRODUCT_ID \
+curl -X PUT "${API_URL%/}/products/$PRODUCT_ID" \
   -H "Content-Type: application/json" \
   -d '{"price": 79.99, "description": "Updated"}' | jq .
 
 # 4. Verificar actualización
-curl -X GET $API_URL/products/$PRODUCT_ID | jq .
+curl -X GET "${API_URL%/}/products/$PRODUCT_ID" | jq .
 ```
 
 ### Respuesta Exitosa Esperada
@@ -329,7 +335,7 @@ Necesito implementar una función Lambda en Node.js 18.x que actualice un produc
 Requisitos:
 - Nombre de función: UpdateItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (PUT /products/{id} con cuerpo JSON)
+- Trigger: Lambda Function URL vía router (PUT /products/{id} con cuerpo JSON) — el router reconstruye event.pathParameters.id
 - Parámetro de ruta: id (productId)
 - Base de datos: Tabla DynamoDB (nombre de variable de entorno PRODUCTS_TABLE)
 - Verificar si el producto existe antes de actualizar
@@ -354,7 +360,7 @@ Por favor genera:
 5. Actualizar timestamp
 6. UpdateItem de DynamoDB con AWS SDK v3
 7. Retornar 404 si no se encuentra
-8. Formato de respuesta API Gateway
+8. Formato de respuesta HTTP (Lambda Function URL)
 ```
 
 ## Notas de Implementación

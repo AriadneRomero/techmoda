@@ -20,7 +20,7 @@ describe('ProductCard Component', () => {
       render(<ProductCard product={mockProduct} />);
 
       const img = screen.getByRole('img', { name: mockProduct.name });
-      expect(img).toHaveAttribute('src', mockProduct.image_url);
+      expect(img).toHaveAttribute('src', mockProduct.imageUrl);
       expect(img).toHaveAttribute('alt', mockProduct.name);
     });
 
@@ -107,7 +107,7 @@ describe('ProductCard Component', () => {
       await user.click(deleteButton);
 
       expect(onDelete).toHaveBeenCalledTimes(1);
-      expect(onDelete).toHaveBeenCalledWith(mockProduct.product_id);
+      expect(onDelete).toHaveBeenCalledWith(mockProduct.productId);
     });
 
     it('should not call onEdit if callback is not provided', async () => {

@@ -1,0 +1,11 @@
+{
+  "name": "analyze-image-rekognition",
+  "version": "1.0.0",
+  "description": "Lambda que llama a AWS Rekognition para detectar objetos en imágenes de productos",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@aws-sdk/client-rekognition": "^3.600.0"
+  }
+}

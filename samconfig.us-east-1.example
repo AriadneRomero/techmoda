@@ -1,0 +1,27 @@
+# AWS SAM Configuration — TechModa AI Capstone
+#
+# Uso:  cp samconfig.us-east-1.example samconfig.toml
+#
+# samconfig.toml está en .gitignore para no comitear settings específicos de tu cuenta.
+# Región de trabajo del proyecto: us-east-1 (Norte de Virginia). Cambiala si desplegás
+# en otra — no hay nada atado a la región en los templates (ver docs/IAM.md).
+
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "techmoda-ai"
+region = "us-east-1"
+# Ninguna de las dos capabilities es opcional:
+#   CAPABILITY_IAM         -> el stack CREA roles (uno de mínimo privilegio por Lambda).
+#                             Necesitás iam:CreateRole en la cuenta. Ver docs/IAM.md.
+#   CAPABILITY_AUTO_EXPAND -> lo exige el Transform de SAM.
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+confirm_changeset = false
+resolve_s3 = true
+# Los templates no declaran Parameters: no hay nada que sobreescribir acá.
+parameter_overrides = []
+image_repositories = []
+
+[default.build.parameters]
+cached = true
+parallel = true

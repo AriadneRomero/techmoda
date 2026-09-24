@@ -89,6 +89,12 @@ exports.handler = async (event) => {
             expressionAttributeValues[':category'] = body.category;
         }
 
+        if (body.stock !== undefined) {
+            updateExpressions.push('#stock = :stock');
+            expressionAttributeNames['#stock'] = 'stock';
+            expressionAttributeValues[':stock'] = parseInt(body.stock, 10);
+        }
+
         if (body.imageUrl !== undefined) {
             updateExpressions.push('#imageUrl = :imageUrl');
             expressionAttributeNames['#imageUrl'] = 'imageUrl';

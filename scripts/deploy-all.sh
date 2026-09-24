@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Deploy ALL script for TechModa Serverless Capstone
-# This script deploys both backend (Lambda + API Gateway + DynamoDB) and frontend (React app to S3/CloudFront)
+# Deploy ALL script for TechModa AI Capstone
+# Despliega backend (Lambda Function URLs + DynamoDB) y frontend (React a S3/CloudFront).
+# No hay API Gateway: el frente HTTP son Function URLs (ver docs/SANDBOX-COMPAT.md).
 #
 
 set -e
@@ -12,28 +13,18 @@ echo "=========================================="
 echo ""
 
 # Get stack name from samconfig.toml or use default
-STACK_NAME="techmoda-capstone"
+STACK_NAME="${STACK_NAME:-techmoda-ai}"
 if [ -f "samconfig.toml" ]; then
-    STACK_NAME=$(grep 'stack_name' samconfig.toml | cut -d'"' -f2 || echo "techmoda-capstone")
+    STACK_NAME=$(grep 'stack_name' samconfig.toml | cut -d'"' -f2 || echo "techmoda-ai")
 fi
 
-echo "📦 Paso 1/4: Construyendo Backend..."
+echo "📦 Paso 1/3: Construyendo y desplegando Backend..."
 echo "-------------------------------------------"
-sam build
-echo "✅ Backend construido exitosamente"
-echo ""
-
-echo "🚀 Paso 2/4: Desplegando Backend..."
-echo "-------------------------------------------"
-# Check if samconfig.toml exists
-if [ ! -f "samconfig.toml" ]; then
-    echo "⚠️  Primera vez desplegando. Se te harán algunas preguntas..."
-    echo ""
-    sam deploy --guided
-else
-    echo "📝 Usando configuración existente en samconfig.toml"
-    sam deploy
-fi
+echo "    (Function URLs, sin API Gateway; SAM crea un rol de mínimo privilegio por Lambda)"
+echo "    Detalle: docs/IAM.md"
+# scripts/deploy.sh hace sam build + sam deploy con las capabilities correctas.
+# CAPABILITY_IAM es obligatoria: el stack crea roles. CAPABILITY_AUTO_EXPAND, por el Transform SAM.
+STACK_NAME="$STACK_NAME" ./scripts/deploy.sh
 echo "✅ Backend desplegado exitosamente"
 echo ""
 
@@ -43,7 +34,7 @@ API_URL=$(aws cloudformation describe-stacks \
     --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
     --output text 2>/dev/null || echo "")
 
-echo "🎨 Paso 3/4: Construyendo Frontend..."
+echo "🎨 Paso 2/3: Construyendo Frontend..."
 echo "-------------------------------------------"
 cd frontend
 if [ ! -d "node_modules" ]; then
@@ -56,7 +47,7 @@ cd ..
 echo "✅ Frontend construido exitosamente"
 echo ""
 
-echo "☁️  Paso 4/4: Desplegando Frontend a S3..."
+echo "☁️  Paso 3/3: Desplegando Frontend a S3..."
 echo "-------------------------------------------"
 ./scripts/deploy-frontend.sh
 echo ""

@@ -2,6 +2,11 @@
 
 Estos prompts le ayudan a instalar y configurar las herramientas necesarias para desplegar su API serverless de TechModa.
 
+> 🔌 **Cómo está armado TechModa:** usa **Lambda Function URLs** + un router en vez de API Gateway,
+> y **SAM crea un rol de mínimo privilegio por Lambda** a partir de sus `Policies:`. Necesitás una
+> cuenta donde puedas crear roles IAM (`iam:CreateRole`) — no hace falta crear ninguno a mano. Ver
+> [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md) y [../IAM.md](../IAM.md).
+
 ## Prompt 1.1: Instalación de AWS CLI (macOS)
 
 ```

@@ -1,0 +1,440 @@
+Transform: AWS::Serverless-2016-10-31
+Description: TechModa AI Capstone - version ENSAMBLADA (base S0 + sesiones S1-S10)
+
+# ============================================================================
+# Version "todo junto" del capstone: la base S0 + las 8 features de IA + gobernanza.
+#
+# IAM: cada Lambda declara sus propias `Policies:` y **SAM le crea un rol de
+# minimo privilegio**. No hay rol preexistente que referenciar ni account ID
+# hardcodeado, asi que este template funciona en cualquier cuenta AWS donde
+# tengas permiso de crear roles (iam:CreateRole).
+#
+# El patron es siempre el mismo y es lo que evalua el dominio D5 del AIF-C01:
+#   1. Acceso a datos acotado POR TABLA  -> DynamoDBCrudPolicy / DynamoDBReadPolicy
+#   2. Acceso al servicio de IA acotado POR ACCION (las APIs Detect/Synthesize
+#      de Rekognition/Comprehend/Polly/Translate no admiten ARN de recurso, asi
+#      que el limite real es la accion)
+#   3. Bedrock acotado POR ARN de modelo (si admite recurso)
+#
+# HTTP: cada Lambda expone su propia Function URL (AuthType NONE, sin API Gateway).
+# El CRUD usa UN router (functions/router) con UNA Function URL.
+#
+# Detalle: docs/IAM.md
+# ============================================================================
+
+Globals:
+  Function:
+    # Boundary obligatorio: la policy de deploy de los workspaces solo permite
+    # iam:CreateRole si el rol nace con este permissions boundary (techo de permisos).
+    PermissionsBoundary: arn:aws:iam::281248178297:policy/techmoda-capstone-boundary
+    Timeout: 30
+    MemorySize: 1024
+    Runtime: nodejs22.x          # default; las Lambdas Python overridean Runtime
+    Tracing: Active
+    Environment:
+      Variables:
+        PRODUCTS_TABLE: !Ref ProductsTable
+    Tags:                         # S10: cost allocation tags
+      Project: techmoda-ai-capstone
+      Module: ai-practitioner
+      Environment: dev
+
+Resources:
+  ProductsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-Products
+      AttributeDefinitions:
+        - AttributeName: productId
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: productId
+          KeyType: HASH
+
+  # ---- CRUD base (S0): router + 1 Function URL ----
+  RouterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-Router
+      Description: Router CRUD de /products via Lambda Function URL
+      CodeUri: functions/
+      Handler: router/index.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S1 · Rekognition DetectLabels ----
+  EnrichLabelsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-EnrichLabels
+      CodeUri: sessions/S01-rekognition-labels/functions/enrich-labels
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        # Las APIs Detect* de Rekognition no admiten ARN de recurso -> acotamos por accion.
+        - Statement:
+            - Effect: Allow
+              Action: rekognition:DetectLabels
+              Resource: "*"
+        # Si imageUrl es s3://, Rekognition lee el objeto con ESTE rol.
+        - S3ReadPolicy:
+            BucketName: !Sub ${AWS::StackName}-frontend
+      Environment:
+        Variables:
+          LABEL_MIN_CONFIDENCE: "80"
+          LABEL_MAX_LABELS: "15"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S2 · Rekognition Moderation + alt-text ----
+  ModerateImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ModerateImage
+      CodeUri: sessions/S02-moderation-alttext/functions/moderate-image
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:DetectModerationLabels
+                - rekognition:DetectLabels    # el alt-text reusa las etiquetas
+              Resource: "*"
+        - S3ReadPolicy:
+            BucketName: !Sub ${AWS::StackName}-frontend
+      Environment:
+        Variables:
+          MODERATION_MIN_CONFIDENCE: "60"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S3 · Comprehend Sentiment ----
+  AnalyzeSentimentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-AnalyzeSentiment
+      CodeUri: sessions/S03-comprehend-sentiment/functions/analyze-sentiment
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: comprehend:DetectSentiment
+              Resource: "*"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S4 · Translate ----
+  TranslateCatalogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-TranslateCatalog
+      CodeUri: sessions/S04-translate-multilang/functions/translate-catalog
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: translate:TranslateText
+              Resource: "*"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S5 · Polly + audio bucket ----
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-audio
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireAudio
+            Status: Enabled
+            ExpirationInDays: 7
+
+  SynthesizeVoiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-SynthesizeVoice
+      CodeUri: sessions/S05-polly-voice/functions/synthesize-voice
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: polly:SynthesizeSpeech
+              Resource: "*"
+        # Escribe el mp3 y firma la URL prefirmada con este mismo rol -> necesita Crud.
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucket
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S6 · Bedrock generacion ----
+  GenerateDescriptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-GenerateDescription
+      CodeUri: sessions/S06-bedrock-descripciones/functions/generate-description
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        # Bedrock SI admite ARN de recurso -> acotamos al modelo, no a bedrock:*.
+        # Se incluye inference-profile porque los IDs con prefijo "us." (perfiles
+        # cross-region) se resuelven contra ese ARN, no contra foundation-model.
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: anthropic.claude-haiku-4-5-20251001-v1:0
+          BEDROCK_MAX_TOKENS: "300"
+          BEDROCK_TEMPERATURE: "0.7"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S7 · Bedrock embeddings ----
+  IndexEmbeddingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-IndexEmbeddings
+      CodeUri: sessions/S07-bedrock-rag-busqueda/functions/index-embeddings
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 120
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+      Environment:
+        Variables:
+          EMBED_MODEL_ID: amazon.titan-embed-text-v2:0
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  SemanticSearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-SemanticSearch
+      CodeUri: sessions/S07-bedrock-rag-busqueda/functions/semantic-search
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      Policies:
+        # Solo lee el catalogo (no escribe) -> Read, no Crud.
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+      Environment:
+        Variables:
+          EMBED_MODEL_ID: amazon.titan-embed-text-v2:0
+          SEARCH_TOP_K: "5"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S8 · Bedrock RAG chatbot ----
+  ShoppingAssistantFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ShoppingAssistant
+      CodeUri: sessions/S08-bedrock-chatbot/functions/shopping-assistant
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ProductsTable
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                - !Sub arn:${AWS::Partition}:bedrock:*:${AWS::AccountId}:inference-profile/*
+      Environment:
+        Variables:
+          EMBED_MODEL_ID: amazon.titan-embed-text-v2:0
+          BEDROCK_MODEL_ID: anthropic.claude-haiku-4-5-20251001-v1:0
+          ASSISTANT_TOP_K: "3"
+          BEDROCK_MAX_TOKENS: "400"
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [ "*" ]
+          AllowMethods: [ "*" ]
+          AllowHeaders: [ "*" ]
+
+  # ---- S10 · gobernanza (log group de invocacion) ----
+  # La alarma de billing no la crea este stack -> ver sessions/S10-*/GUIA.md.
+  BedrockInvocationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /techmoda/${AWS::StackName}/bedrock-invocations
+      RetentionInDays: 30
+
+  # ---- Frontend (S0) ----
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-frontend
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource: !Sub ${FrontendBucket.Arn}/*
+            Principal: '*'
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD, OPTIONS ]
+          CachedMethods: [ GET, HEAD ]
+          ForwardedValues:
+            QueryString: false
+            Cookies: { Forward: none }
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+Outputs:
+  ApiUrl:
+    Description: Base API URL (Function URL del router CRUD). Termina en '/'.
+    Value: !GetAtt RouterFunctionUrl.FunctionUrl
+  EnrichLabelsUrl:
+    Description: S1 Function URL (POST /products/{id}/labels)
+    Value: !GetAtt EnrichLabelsFunctionUrl.FunctionUrl
+  ModerateImageUrl:
+    Description: S2 Function URL (POST /products/{id}/moderate)
+    Value: !GetAtt ModerateImageFunctionUrl.FunctionUrl
+  AnalyzeSentimentUrl:
+    Description: S3 Function URL (POST /sentiment)
+    Value: !GetAtt AnalyzeSentimentFunctionUrl.FunctionUrl
+  TranslateCatalogUrl:
+    Description: S4 Function URL (POST /products/{id}/translate)
+    Value: !GetAtt TranslateCatalogFunctionUrl.FunctionUrl
+  SynthesizeVoiceUrl:
+    Description: S5 Function URL (POST /products/{id}/voice)
+    Value: !GetAtt SynthesizeVoiceFunctionUrl.FunctionUrl
+  GenerateDescriptionUrl:
+    Description: S6 Function URL (POST /products/{id}/describe)
+    Value: !GetAtt GenerateDescriptionFunctionUrl.FunctionUrl
+  IndexEmbeddingsUrl:
+    Description: S7 Function URL (POST /search/index)
+    Value: !GetAtt IndexEmbeddingsFunctionUrl.FunctionUrl
+  SemanticSearchUrl:
+    Description: S7 Function URL (GET /search?q=...)
+    Value: !GetAtt SemanticSearchFunctionUrl.FunctionUrl
+  ShoppingAssistantUrl:
+    Description: S8 Function URL (POST /assistant)
+    Value: !GetAtt ShoppingAssistantFunctionUrl.FunctionUrl
+  ProductsTableName:
+    Value: !Ref ProductsTable
+  Region:
+    Value: !Ref AWS::Region
+  FrontendUrl:
+    Value: !Sub 'https://${FrontendDistribution.DomainName}'
+  FrontendBucketName:
+    Value: !Ref FrontendBucket
+  AudioBucketName:
+    Value: !Ref AudioBucket

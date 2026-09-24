@@ -1,0 +1,47 @@
+# ============================================================================
+# S10 · Gobernanza: tags de costo + alarma de billing + log group de invocacion
+# ============================================================================
+# Pegar en template.yaml. Demuestra atribucion de costos y observabilidad.
+
+  # --- Alarma proactiva de costos (FinOps) ---
+  # Nota: las metricas de Billing viven SOLO en us-east-1, que ya es la region del
+  # stack, asi que no hay problema de cross-region. Si tu sandbox no permite crear
+  # alarmas, creala manualmente en la consola o usá AWS Budgets. Aqui se muestra el
+  # patron.
+  AiCostAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-estimated-charges
+      AlarmDescription: Alerta si el cargo estimado de la cuenta supera el umbral.
+      Namespace: AWS/Billing
+      MetricName: EstimatedCharges
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      Statistic: Maximum
+      Period: 21600          # 6 h
+      EvaluationPeriods: 1
+      Threshold: 5           # USD — ajustar al presupuesto de práctica del sandbox
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+  # --- Log group dedicado para invocaciones de modelos (Bedrock invocation logging) ---
+  BedrockInvocationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /techmoda/${AWS::StackName}/bedrock-invocations
+      RetentionInDays: 30    # FinOps: no retener logs para siempre
+
+# ----------------------------------------------------------------------------
+# COST ALLOCATION TAGS — agregar a Globals (aplica a todas las funciones) o por
+# recurso. En SAM, lo más simple es agregar a `Globals.Function`:
+#
+# Globals:
+#   Function:
+#     Tags:
+#       Project: techmoda-ai-capstone
+#       Module: ai-practitioner
+#       Environment: sandbox
+#
+# Luego activá los tags en Billing > Cost Allocation Tags para verlos en Cost Explorer.
+# ----------------------------------------------------------------------------

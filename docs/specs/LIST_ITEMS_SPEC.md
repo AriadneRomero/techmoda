@@ -1,5 +1,9 @@
 # Especificación de Función Lambda: ListItems
 
+> 🏖️ **Sandbox AWS re/Start:** se invoca vía la **Lambda Function URL del router** (no API Gateway).
+> El evento es **Function URL payload v2.0** y la función lleva sus **`Policies:` acotadas** (SAM le crea el rol).
+> Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Propósito
 
 Retornar todos los productos en el catálogo de moda TechModa realizando una operación Scan de DynamoDB.
@@ -10,7 +14,7 @@ Retornar todos los productos en el catálogo de moda TechModa realizando una ope
 
 **Ruta**: `/products`
 
-**Trigger**: Evento de API Gateway REST API
+**Trigger**: Lambda Function URL (vía router) — payload v2.0
 
 ## Esquema de Entrada
 
@@ -26,13 +30,12 @@ Ninguno requerido
 ### Cuerpo de Solicitud
 Ninguno
 
-### Estructura de Evento API Gateway
+### Estructura de Evento (Lambda Function URL, payload v2.0)
 ```javascript
 {
-  "httpMethod": "GET",
-  "path": "/products",
+  "rawPath": "/products",
+  "requestContext": { "http": { "method": "GET" } },
   "headers": { ... },
-  "requestContext": { ... },
   "body": null
 }
 ```
@@ -160,14 +163,14 @@ Ninguno
 
 5. Manejar caso exitoso
    - Envolver Items en objeto de respuesta: { products: Items }
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 200
      * headers: Content-Type y CORS
      * body: JSON.stringify({ products: Items })
 
 6. Manejar caso de error
    - Registrar error en CloudWatch (console.error)
-   - Retornar respuesta de error API Gateway:
+   - Retornar respuesta de error HTTP (Lambda Function URL):
      * statusCode: 500
      * headers: Content-Type y CORS
      * body: JSON.stringify({ error: "...", message: "..." })
@@ -175,21 +178,22 @@ Ninguno
 
 ## Comando Curl de Prueba
 
-### Obtener URL de API Gateway
+### Obtener la Function URL (router)
 
-Después de desplegar tu stack SAM, obtén la URL del API desde los outputs de CloudFormation:
+Después de desplegar tu stack SAM, obtén la Function URL del router desde los outputs de CloudFormation
+(output `ApiUrl`):
 
 ```bash
-aws cloudformation describe-stacks \
-  --stack-name techmoda-capstone \
-  --query "Stacks[0].Outputs[?OutputKey=='TechModaApi'].OutputValue" \
-  --output text
+API_URL=$(aws cloudformation describe-stacks \
+  --stack-name techmoda-ai \
+  --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+  --output text)
 ```
 
 ### Comando de Prueba
 
 ```bash
-curl -X GET https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products
+curl -X GET "${API_URL%/}/products"
 ```
 
 ### Respuesta Exitosa Esperada
@@ -214,7 +218,7 @@ curl -X GET https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products
 ### Verificar en CloudWatch Logs
 
 ```bash
-aws logs tail /aws/lambda/techmoda-capstone-ListItems --follow
+aws logs tail /aws/lambda/techmoda-ai-ListItems --follow
 ```
 
 Buscar:
@@ -233,7 +237,7 @@ Necesito implementar una función Lambda en Node.js 18.x que liste todos los pro
 Requisitos:
 - Nombre de función: ListItems
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (GET /products)
+- Trigger: Lambda Function URL vía router (GET /products) — evento payload v2.0
 - Base de datos: Tabla DynamoDB (nombre de variable de entorno PRODUCTS_TABLE)
 - Operación: Scan de todos los items
 - Respuesta: Array JSON de productos con HTTP 200
@@ -254,7 +258,7 @@ Por favor genera:
 1. Archivo index.js completo con función exports.handler
 2. Imports de AWS SDK v3 para DynamoDB
 3. Manejo de errores con try/catch
-4. Formato de respuesta API Gateway (statusCode, headers, body)
+4. Formato de respuesta HTTP (Lambda Function URL): statusCode, headers, body
 5. Comentarios explicando cada sección
 ```
 
@@ -310,9 +314,9 @@ catch (error) {
 }
 ```
 
-### Formato de Respuesta API Gateway
+### Formato de Respuesta HTTP (Lambda Function URL)
 
-Lambda debe retornar respuestas en esta estructura:
+Lambda debe retornar respuestas en esta estructura (válida para Function URL):
 
 ```javascript
 {
@@ -350,12 +354,18 @@ Environment:
 
 **Causa**: El rol de ejecución de Lambda carece de permisos DynamoDB
 
-**Solución**: Agrega política de lectura DynamoDB en template SAM:
-```yaml
-Policies:
-  - DynamoDBReadPolicy:
-      TableName: !Ref ProductsTable
-```
+**Solución:** confirma que la función declare `DynamoDBCrudPolicy`/`DynamoDBReadPolicy` sobre la tabla
+y que **no** tenga además un `Role:` — son mutuamente excluyentes en SAM y con `Role` las `Policies`
+se ignoran **en silencio**. Ver `docs/IAM.md`.
+
+> 📚 **Material didáctico (cuenta propia):** en una cuenta sin las restricciones del sandbox, SAM crea
+> un rol por función y se agrega la política de mínimo privilegio:
+> ```yaml
+> Policies:
+>   - DynamoDBReadPolicy:
+>       TableName: !Ref ProductsTable
+> ```
+> Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md) §2.
 
 ### Error: "undefined is not a function"
 

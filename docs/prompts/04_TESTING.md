@@ -2,12 +2,16 @@
 
 Estos prompts le ayudan a probar sus endpoints de la API de TechModa usando comandos curl y a solucionar problemas de solicitudes fallidas.
 
+> 🏖️ **Sandbox AWS re/Start:** la URL base es una **Lambda Function URL** (output `ApiUrl`), con
+> formato `https://<id>.lambda-url.us-east-1.on.aws/` — termina en `/` y **no** lleva `/Prod`. Quita
+> la barra final con `${API_URL%/}` al concatenar rutas. Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Prompt 4.1: Generar Comandos Curl para Todos los Endpoints
 
 ```
 I have deployed my TechModa capstone API and need curl commands to test all 5 endpoints.
 
-API Gateway URL: https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod
+Lambda Function URL (router): https://<id>.lambda-url.us-east-1.on.aws/
 
 Endpoints to test:
 1. GET /products (list all)
@@ -38,7 +42,7 @@ Error response:
 
 Please help me:
 1. Interpret the error message
-2. Identify likely cause (Lambda error, API Gateway config, DynamoDB permissions)
+2. Identify likely cause (Lambda error, Function URL/router config, DynamoDB permissions)
 3. Suggest where to look for logs (CloudWatch Logs)
 4. Provide debugging steps
 ```
@@ -58,7 +62,7 @@ Siga esta secuencia para pruebas completas:
 ### Guardar URL de API
 
 ```bash
-export API_URL="https://abc123xyz.execute-api.us-east-1.amazonaws.com/Prod"
+export API_URL="https://abc123xyzabc123xyzabc123xyz0000.lambda-url.us-east-1.on.aws"
 ```
 
 ### Probar Todos los Endpoints
@@ -309,7 +313,7 @@ Curl is giving me "Connection refused" error.
 Error: curl: (7) Failed to connect to [host] port 443: Connection refused
 
 Please help me:
-1. Verify my API Gateway URL is correct
+1. Verify my Lambda Function URL is correct (ends with .lambda-url.<region>.on.aws/)
 2. Check if deployment completed successfully
 3. Test connectivity to AWS
 ```

@@ -1,0 +1,3 @@
+# boto3 ya viene incluido en el runtime de AWS Lambda (python3.12).
+# Se lista aquí por claridad; no es estrictamente necesario empaquetarlo.
+boto3>=1.34.0

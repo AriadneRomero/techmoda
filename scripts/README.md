@@ -2,6 +2,11 @@
 
 Este directorio contiene scripts para facilitar el despliegue y gestión de la aplicación TechModa.
 
+> 🏖️ **Sandbox AWS re/Start:** el frente HTTP son **Lambda Function URLs** (no API Gateway), el stack
+> se llama **`techmoda-ai`** y la región es **us-east-1**. Las URLs de ejemplo de abajo tienen el
+> formato `https://<id>.lambda-url.us-east-1.on.aws/`. Ver
+> [../docs/SANDBOX-COMPAT.md](../docs/SANDBOX-COMPAT.md).
+
 ## 📋 Índice de Scripts
 
 ### 🚀 Scripts Simplificados (Recomendados para Alumnos)
@@ -66,12 +71,12 @@ Esto muestra:
 ```
 
 **⚠️ IMPORTANTE**: Este comando elimina TODOS los recursos de AWS:
-- API Gateway
-- 5 Funciones Lambda
+- Lambda Function URLs (router CRUD + funciones de IA)
+- 5 Funciones Lambda (+ router y funciones de IA)
 - Tabla DynamoDB (con todos los datos)
 - Bucket S3
 - Distribución CloudFront
-- Roles y políticas IAM
+- Los roles IAM de ejecución (uno por Lambda, creados por SAM) — se borran con el stack.
 
 ### ¿Falló la Eliminación?
 
@@ -166,30 +171,30 @@ Cuando pregunte, escribe: `si` (o `SI` o `yes`)
   TechModa - Estado del Despliegue
 ==========================================
 
-🔍 Buscando stack: techmoda-capstone
+🔍 Buscando stack: techmoda-ai
 
 📊 Estado del Stack
 -------------------------------------------
-Nombre: techmoda-capstone
+Nombre: techmoda-ai
 Estado: CREATE_COMPLETE
 
 📋 Información del Despliegue
 -------------------------------------------
-🔗 API Backend:
-   https://abc123.execute-api.us-east-1.amazonaws.com/Prod
+🔗 API Backend (Lambda Function URL del router):
+   https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/
 
    Endpoints disponibles:
-   • GET    https://abc123.execute-api.us-east-1.amazonaws.com/Prod/products
-   • POST   https://abc123.execute-api.us-east-1.amazonaws.com/Prod/products
-   • GET    https://abc123.execute-api.us-east-1.amazonaws.com/Prod/products/{id}
-   • PUT    https://abc123.execute-api.us-east-1.amazonaws.com/Prod/products/{id}
-   • DELETE https://abc123.execute-api.us-east-1.amazonaws.com/Prod/products/{id}
+   • GET    https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/products
+   • POST   https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/products
+   • GET    https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/products/{id}
+   • PUT    https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/products/{id}
+   • DELETE https://abc123abc123abc123abc123abc1230.lambda-url.us-east-1.on.aws/products/{id}
 
 🌐 Frontend Web:
    https://d123abc.cloudfront.net
 
 🗄️  Base de Datos:
-   Tabla: techmoda-capstone-ProductsTable-ABC123
+   Tabla: techmoda-ai-ProductsTable-ABC123
    Productos: 5
 
 ==========================================
@@ -232,19 +237,19 @@ Estado: CREATE_COMPLETE
 ==========================================
 
 🔧 Intentando recuperar del error DELETE_FAILED
-Stack: techmoda-capstone
+Stack: techmoda-ai
 
 📊 Estado actual del stack: DELETE_FAILED
 
 🔍 Paso 1: Identificando buckets S3 problemáticos...
 -------------------------------------------
 📦 Buckets encontrados:
-   • techmoda-capstone-frontend-abc123
+   • techmoda-ai-frontend-abc123
    • aws-sam-cli-managed-default-samclisourcebucket-xyz789
 
 🗑️  Paso 2: Vaciando buckets S3...
 -------------------------------------------
-🧹 Vaciando: techmoda-capstone-frontend-abc123
+🧹 Vaciando: techmoda-ai-frontend-abc123
    Eliminando 5 objetos...
    ✅ Bucket vaciado
 🧹 Vaciando: aws-sam-cli-managed-default-samclisourcebucket-xyz789
@@ -351,7 +356,7 @@ Cambiar rango de tiempo:
 ==========================================
 
 📊 Configuration:
-   Stack:    techmoda-capstone
+   Stack:    techmoda-ai
    Function: All functions
    Since:    10m ago
    Mode:     Historical
@@ -421,7 +426,7 @@ Si necesitas más control sobre el proceso, puedes usar los scripts individuales
 ./scripts/deploy-frontend.sh
 ```
 
-**Nota**: `deploy-frontend.sh` automáticamente obtiene la URL de API del backend desplegado y la inyecta en el frontend.
+**Nota**: `deploy-frontend.sh` automáticamente obtiene la Function URL del backend (output `ApiUrl`) y la inyecta en el frontend.
 
 ---
 

@@ -1,0 +1,81 @@
+# ============================================================================
+# S01: REKOGNITION IMAGE ANALYZER
+#
+# Descripción: Lambda que detecta objetos/etiquetas en imágenes de productos
+#             usando AWS Rekognition.
+#
+# Entrar en el template.full.yaml en Resources y agregar:
+#
+#   AnalyzeImageFunction:
+#     Type: AWS::Serverless::Function
+#     Properties:
+#       FunctionName: !Sub ${AWS::StackName}-AnalyzeImage
+#       Description: Detecta objetos en imágenes de productos (Rekognition)
+#       CodeUri: sessions/S01-rekognition-labels/functions/analyze-image/
+#       Handler: index.handler
+#       Runtime: nodejs22.x
+#       Policies:
+#         # 1. Leer el producto de DynamoDB (verificar que existe)
+#         - DynamoDBCrudPolicy:
+#             TableName: !Ref ProductsTable
+#         # 2. Usar Rekognition para detectar etiquetas
+#         - RekognitionLabelsPolicy: {}
+#       FunctionUrlConfig:
+#         AuthType: NONE
+#         Cors:
+#           AllowOrigins:
+#             - "*"
+#           AllowMethods:
+#             - "POST"
+#           AllowHeaders:
+#             - "*"
+#       Environment:
+#         Variables:
+#           PRODUCTS_TABLE: !Ref ProductsTable
+#
+# Y en Outputs, agregar:
+#
+#   AnalyzeImageUrl:
+#     Description: Function URL para analizar imágenes (Rekognition)
+#     Value: !GetAtt AnalyzeImageFunctionUrl.FunctionUrl
+#
+# ============================================================================
+
+# COPY-PASTE a template.full.yaml bajo "Resources:"
+
+  AnalyzeImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-AnalyzeImage
+      Description: Detecta objetos en imágenes de productos usando AWS Rekognition
+      CodeUri: sessions/S01-rekognition-labels/functions/analyze-image/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Timeout: 60
+      MemorySize: 1024
+      Tracing: Active
+      Policies:
+        # Política 1: DynamoDB CRUD (leer producto, actualizar con etiquetas)
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ProductsTable
+        # Política 2: Rekognition (DetectLabels)
+        - RekognitionLabelsPolicy: {}
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - "*"
+          AllowMethods:
+            - POST
+            - OPTIONS
+          AllowHeaders:
+            - "*"
+      Environment:
+        Variables:
+          PRODUCTS_TABLE: !Ref ProductsTable
+
+# COPY-PASTE a Outputs:
+
+  AnalyzeImageUrl:
+    Description: Lambda Function URL para analizar imágenes (Rekognition S01)
+    Value: !GetAtt AnalyzeImageFunctionUrl.FunctionUrl

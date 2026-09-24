@@ -1,5 +1,10 @@
 # Especificación de Función Lambda: GetItem
 
+> 🏖️ **Sandbox AWS re/Start:** se invoca vía la **Lambda Function URL del router** (no API Gateway).
+> El evento es **Function URL payload v2.0**; el **router** extrae el `id` de `event.rawPath` y
+> reconstruye `event.pathParameters.id` antes de llamar a este handler. Ver
+> [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Propósito
 
 Recuperar un único producto por su productId del catálogo de moda TechModa usando la operación GetItem de DynamoDB.
@@ -10,7 +15,7 @@ Recuperar un único producto por su productId del catálogo de moda TechModa usa
 
 **Ruta**: `/products/{id}`
 
-**Trigger**: Evento de API Gateway REST API con parámetro de ruta
+**Trigger**: Lambda Function URL (vía router) con parámetro de ruta — payload v2.0
 
 ## Esquema de Entrada
 
@@ -29,18 +34,18 @@ Ninguno requerido
 ### Cuerpo de Solicitud
 Ninguno
 
-### Estructura de Evento API Gateway
+### Estructura de Evento (Lambda Function URL, payload v2.0)
 ```javascript
 {
-  "httpMethod": "GET",
-  "path": "/products/123e4567-e89b-12d3-a456-426614174000",
-  "pathParameters": {
-    "id": "123e4567-e89b-12d3-a456-426614174000"
-  },
+  "rawPath": "/products/123e4567-e89b-12d3-a456-426614174000",
+  "requestContext": { "http": { "method": "GET" } },
   "headers": { ... },
   "body": null
 }
 ```
+
+El **router** parsea `rawPath` y reconstruye `event.pathParameters.id` antes de invocar este handler,
+así el código del handler sigue leyendo:
 
 **Acceso al Parámetro de Ruta**: `event.pathParameters.id`
 
@@ -162,13 +167,13 @@ Ninguno
    - Si Item existe: retornar 200 OK con producto
 
 7. Manejar caso exitoso (item encontrado)
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 200
      * headers: Content-Type y CORS
      * body: JSON.stringify(Item)
 
 8. Manejar caso no encontrado
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 404
      * headers: Content-Type y CORS
      * body: JSON.stringify({ error: "Not Found", message: "Product not found" })
@@ -185,8 +190,10 @@ Ninguno
 Primero, crea un producto y guarda su ID:
 
 ```bash
+# API_URL = Function URL del router (output ApiUrl). ${API_URL%/} quita la barra final.
+
 # Crear producto y guardar respuesta
-RESPONSE=$(curl -s -X POST $API_URL/products \
+RESPONSE=$(curl -s -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Product", "price": 99.99}')
 
@@ -194,19 +201,19 @@ RESPONSE=$(curl -s -X POST $API_URL/products \
 PRODUCT_ID=$(echo $RESPONSE | jq -r '.productId')
 
 # Obtener el producto
-curl -X GET $API_URL/products/$PRODUCT_ID
+curl -X GET "${API_URL%/}/products/$PRODUCT_ID"
 ```
 
 ### Prueba Directa (con ID conocido)
 
 ```bash
-curl -X GET https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products/123e4567-e89b-12d3-a456-426614174000
+curl -X GET "${API_URL%/}/products/123e4567-e89b-12d3-a456-426614174000"
 ```
 
 ### Probar 404 Not Found
 
 ```bash
-curl -X GET $API_URL/products/nonexistent-id-12345
+curl -X GET "${API_URL%/}/products/nonexistent-id-12345"
 ```
 
 **Esperado**: 404 Not Found
@@ -229,7 +236,7 @@ curl -X GET $API_URL/products/nonexistent-id-12345
 ### Verificar en CloudWatch Logs
 
 ```bash
-aws logs tail /aws/lambda/techmoda-capstone-GetItem --follow
+aws logs tail /aws/lambda/techmoda-ai-GetItem --follow
 ```
 
 ## Prompt para Claude Code
@@ -240,7 +247,7 @@ Necesito implementar una función Lambda en Node.js 18.x que recupere un único 
 Requisitos:
 - Nombre de función: GetItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (GET /products/{id})
+- Trigger: Lambda Function URL vía router (GET /products/{id}) — el router reconstruye event.pathParameters.id
 - Parámetro de ruta: id (productId)
 - Base de datos: Tabla DynamoDB (nombre de variable de entorno PRODUCTS_TABLE)
 - Operación: GetItem por productId
@@ -256,14 +263,15 @@ Por favor genera:
 4. Verificar si el item existe
 5. Retornar 404 si no se encuentra, 200 si se encuentra
 6. Manejo de errores con try/catch
-7. Formato de respuesta API Gateway
+7. Formato de respuesta HTTP (Lambda Function URL)
 ```
 
 ## Notas de Implementación
 
 ### Extracción de Parámetros de Ruta
 
-API Gateway pasa los parámetros de ruta en `event.pathParameters`:
+El **router** pasa los parámetros de ruta en `event.pathParameters` (los reconstruye desde
+`event.rawPath`), por lo que el handler los lee igual que con API Gateway:
 
 ```javascript
 const productId = event.pathParameters.id;
@@ -334,11 +342,10 @@ const headers = {
 
 **Causa**: Parámetro de ruta no pasado correctamente
 
-**Solución**: Verifica que la ruta de API Gateway incluya parámetro `{id}` en template.yaml:
-```yaml
-Path: /products/{id}
-Method: get
-```
+**Solución**: en el sandbox no hay rutas de API Gateway — verifica que el **router**
+(`functions/router/index.js`) esté parseando `/products/{id}` desde `event.rawPath` y reconstruyendo
+`event.pathParameters.id`. Si invocas el handler directamente (sin router), agrega tú mismo
+`pathParameters` al evento de prueba.
 
 ### Error: "Product not found" (pero el producto existe)
 

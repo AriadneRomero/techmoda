@@ -13,7 +13,7 @@ describe('API Module', () => {
         ok: true,
         json: async () => ({ products: mockProducts }),
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       const result = await api.listProducts();
 
@@ -28,7 +28,7 @@ describe('API Module', () => {
         ok: true,
         json: async () => ({}),
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       const result = await api.listProducts();
 
@@ -41,7 +41,7 @@ describe('API Module', () => {
         status: 500,
         statusText: 'Internal Server Error',
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await expect(api.listProducts()).rejects.toThrow(
         'Error 500: Internal Server Error'
@@ -55,7 +55,7 @@ describe('API Module', () => {
         ok: true,
         json: async () => mockProduct,
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       const result = await api.getProduct('test-product-123');
 
@@ -71,7 +71,7 @@ describe('API Module', () => {
         status: 404,
         statusText: 'Not Found',
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await expect(api.getProduct('nonexistent')).rejects.toThrow(
         'Error 404: Not Found'
@@ -85,7 +85,7 @@ describe('API Module', () => {
         ok: true,
         json: async () => mockProduct,
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       const result = await api.createProduct(mockProductInput);
 
@@ -108,7 +108,7 @@ describe('API Module', () => {
         status: 400,
         statusText: 'Bad Request',
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await expect(api.createProduct(mockProductInput)).rejects.toThrow(
         'Error 400: Bad Request'
@@ -125,7 +125,7 @@ describe('API Module', () => {
         ok: true,
         json: async () => updatedProduct,
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       const result = await api.updateProduct('test-product-123', updates);
 
@@ -148,7 +148,7 @@ describe('API Module', () => {
         status: 404,
         statusText: 'Not Found',
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await expect(
         api.updateProduct('nonexistent', { price: 59.99 })
@@ -161,7 +161,7 @@ describe('API Module', () => {
       const mockFetch = vi.fn().mockResolvedValueOnce({
         ok: true,
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await api.deleteProduct('test-product-123');
 
@@ -179,7 +179,7 @@ describe('API Module', () => {
         status: 404,
         statusText: 'Not Found',
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await expect(api.deleteProduct('nonexistent')).rejects.toThrow(
         'Error 404: Not Found'
@@ -189,8 +189,8 @@ describe('API Module', () => {
 
   describe('API URL Configuration', () => {
     it('should use runtime config URL if available', () => {
-      // window.__ENV is already set in setup.ts
-      expect(window.__ENV?.VITE_API_URL).toBe('https://test-api.example.com/Prod');
+      // window.__ENV is already set in setup.ts (Function URL con slash final)
+      expect(window.__ENV?.VITE_API_URL).toBe('https://test-api.lambda-url.us-east-1.on.aws/');
     });
 
     it('should construct correct API endpoints', async () => {
@@ -198,12 +198,13 @@ describe('API Module', () => {
         ok: true,
         json: async () => ({ products: [] }),
       });
-      global.fetch = mockFetch;
+      globalThis.fetch = mockFetch;
 
       await api.listProducts();
 
+      // El slash final de la Function URL se normaliza -> sin doble slash.
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://test-api.example.com/Prod/products'
+        'https://test-api.lambda-url.us-east-1.on.aws/products'
       );
     });
   });

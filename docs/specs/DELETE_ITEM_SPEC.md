@@ -1,5 +1,9 @@
 # Especificación de Función Lambda: DeleteItem
 
+> 🏖️ **Sandbox AWS re/Start:** se invoca vía la **Lambda Function URL del router** (no API Gateway).
+> El evento es **Function URL payload v2.0**; el **router** reconstruye `event.pathParameters.id` desde
+> `event.rawPath`. Ver [../SANDBOX-COMPAT.md](../SANDBOX-COMPAT.md).
+
 ## Propósito
 
 Eliminar un producto del catálogo de moda TechModa usando la operación DeleteItem de DynamoDB.
@@ -10,7 +14,7 @@ Eliminar un producto del catálogo de moda TechModa usando la operación DeleteI
 
 **Ruta**: `/products/{id}`
 
-**Trigger**: Evento de API Gateway REST API con parámetro de ruta
+**Trigger**: Lambda Function URL (vía router) con parámetro de ruta — payload v2.0
 
 ## Esquema de Entrada
 
@@ -29,18 +33,16 @@ Ninguno requerido
 ### Cuerpo de Solicitud
 Ninguno
 
-### Estructura de Evento API Gateway
+### Estructura de Evento (Lambda Function URL, payload v2.0)
 ```javascript
 {
-  "httpMethod": "DELETE",
-  "path": "/products/123e4567-e89b-12d3-a456-426614174000",
-  "pathParameters": {
-    "id": "123e4567-e89b-12d3-a456-426614174000"
-  },
+  "rawPath": "/products/123e4567-e89b-12d3-a456-426614174000",
+  "requestContext": { "http": { "method": "DELETE" } },
   "headers": { ... },
   "body": null
 }
 ```
+*(El router reconstruye `event.pathParameters.id` desde `rawPath` antes de invocar este handler.)*
 
 ## Esquema de Salida
 
@@ -177,7 +179,7 @@ Si deseas verificar que el item existía antes de la eliminación:
    - Enviar DeleteCommand a DynamoDB
 
 6. Manejar caso exitoso
-   - Retornar respuesta API Gateway:
+   - Retornar respuesta HTTP (Lambda Function URL):
      * statusCode: 200
      * headers: Content-Type y CORS
      * body: JSON.stringify({ message: "Product deleted successfully", productId })
@@ -210,8 +212,10 @@ Si deseas verificar que el item existía antes de la eliminación:
 Primero, crea un producto:
 
 ```bash
+# API_URL = Function URL del router (output ApiUrl). ${API_URL%/} quita la barra final.
+
 # Crear producto
-RESPONSE=$(curl -s -X POST $API_URL/products \
+RESPONSE=$(curl -s -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{"name": "Product To Delete", "price": 99.99}')
 
@@ -220,30 +224,30 @@ PRODUCT_ID=$(echo $RESPONSE | jq -r '.productId')
 echo "Created product: $PRODUCT_ID"
 
 # Eliminar el producto
-curl -X DELETE $API_URL/products/$PRODUCT_ID
+curl -X DELETE "${API_URL%/}/products/$PRODUCT_ID"
 ```
 
 ### Prueba Directa (con ID conocido)
 
 ```bash
-curl -X DELETE https://{api-id}.execute-api.us-east-1.amazonaws.com/Prod/products/123e4567-e89b-12d3-a456-426614174000
+curl -X DELETE "${API_URL%/}/products/123e4567-e89b-12d3-a456-426614174000"
 ```
 
 ### Verificar Eliminación
 
 ```bash
 # Intentar obtener el producto eliminado (debería retornar 404)
-curl -X GET $API_URL/products/$PRODUCT_ID
+curl -X GET "${API_URL%/}/products/$PRODUCT_ID"
 ```
 
 ### Probar Idempotencia (Eliminar Dos Veces)
 
 ```bash
 # Eliminar una vez
-curl -X DELETE $API_URL/products/$PRODUCT_ID
+curl -X DELETE "${API_URL%/}/products/$PRODUCT_ID"
 
 # Eliminar nuevamente (debería retornar 200 si no hay verificación de existencia)
-curl -X DELETE $API_URL/products/$PRODUCT_ID
+curl -X DELETE "${API_URL%/}/products/$PRODUCT_ID"
 ```
 
 ### Flujo de Prueba Completo
@@ -253,7 +257,7 @@ curl -X DELETE $API_URL/products/$PRODUCT_ID
 
 # 1. Crear producto
 echo "1. Creating product..."
-RESPONSE=$(curl -s -X POST $API_URL/products \
+RESPONSE=$(curl -s -X POST "${API_URL%/}/products" \
   -H "Content-Type: application/json" \
   -d '{"name": "Temporary Product", "price": 49.99}')
 PRODUCT_ID=$(echo $RESPONSE | jq -r '.productId')
@@ -261,19 +265,19 @@ echo "Created: $PRODUCT_ID"
 
 # 2. Verificar que el producto existe
 echo "2. Verifying product exists..."
-curl -s -X GET $API_URL/products/$PRODUCT_ID | jq .
+curl -s -X GET "${API_URL%/}/products/$PRODUCT_ID" | jq .
 
 # 3. Eliminar producto
 echo "3. Deleting product..."
-curl -s -X DELETE $API_URL/products/$PRODUCT_ID | jq .
+curl -s -X DELETE "${API_URL%/}/products/$PRODUCT_ID" | jq .
 
 # 4. Verificar eliminación (debería retornar 404)
 echo "4. Verifying deletion..."
-curl -s -X GET $API_URL/products/$PRODUCT_ID | jq .
+curl -s -X GET "${API_URL%/}/products/$PRODUCT_ID" | jq .
 
 # 5. Listar productos (el producto eliminado no debería aparecer)
 echo "5. Listing products..."
-curl -s -X GET $API_URL/products | jq .
+curl -s -X GET "${API_URL%/}/products" | jq .
 ```
 
 ### Respuesta Exitosa Esperada
@@ -293,7 +297,7 @@ Necesito implementar una función Lambda en Node.js 18.x que elimine un producto
 Requisitos:
 - Nombre de función: DeleteItem
 - Runtime: Node.js 18.x
-- Trigger: API Gateway (DELETE /products/{id})
+- Trigger: Lambda Function URL vía router (DELETE /products/{id}) — el router reconstruye event.pathParameters.id
 - Parámetro de ruta: id (productId)
 - Base de datos: Tabla DynamoDB (nombre de variable de entorno PRODUCTS_TABLE)
 - Operación: DeleteItem por productId
@@ -309,7 +313,7 @@ Por favor genera:
 3. DeleteItem de DynamoDB con AWS SDK v3
 4. Respuesta de éxito con mensaje de confirmación
 5. Manejo de errores con try/catch
-6. Formato de respuesta API Gateway
+6. Formato de respuesta HTTP (Lambda Function URL)
 ```
 
 ## Notas de Implementación
@@ -395,11 +399,9 @@ const headers = {
 
 **Causa**: Parámetro de ruta no pasado correctamente
 
-**Solución**: Verifica la ruta de API Gateway en template.yaml:
-```yaml
-Path: /products/{id}
-Method: delete
-```
+**Solución**: en el sandbox no hay rutas de API Gateway — verifica que el **router**
+(`functions/router/index.js`) parsee `/products/{id}` desde `event.rawPath` y reconstruya
+`event.pathParameters.id`. Si invocas el handler directamente, agrega `pathParameters` al evento de prueba.
 
 ### Error: "ValidationException: One or more parameter values were invalid"
 
@@ -422,7 +424,7 @@ Key: {
 - Usa AWS CLI para verificar eliminación:
 ```bash
 aws dynamodb get-item \
-  --table-name techmoda-capstone-Products \
+  --table-name techmoda-ai-Products \
   --key '{"productId": {"S": "the-uuid"}}'
 ```
 
@@ -444,7 +446,7 @@ Tu función DeleteItem está correctamente implementada cuando:
 **Verificar en DynamoDB**:
 ```bash
 aws dynamodb scan \
-  --table-name techmoda-capstone-Products \
+  --table-name techmoda-ai-Products \
   --filter-expression "productId = :id" \
   --expression-attribute-values '{":id": {"S": "the-uuid"}}'
 ```
